@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetHeader,
   SheetTitle,
@@ -52,9 +53,19 @@ export function ExportDrawer({ open, onOpenChange, theme }: Props) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        showCloseButton
-        className="h-[60vh] sm:h-[60vh] bg-[#faf6f0] border-t border-[#d4c8bc] text-[#1a0a14] p-0 flex flex-col"
+        showCloseButton={false}
+        className="bg-[#faf6f0] border-t border-[#d4c8bc] text-[#1a0a14] p-0 flex flex-col"
+        style={{ height: "60vh" }}
       >
+        <SheetClose asChild>
+          <button
+            type="button"
+            aria-label="Close"
+            className="absolute top-4 right-4 text-[#1a0a14] hover:opacity-60 transition-opacity text-lg leading-none cursor-pointer z-10"
+          >
+            ✕
+          </button>
+        </SheetClose>
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-[#d4c8bc]">
           <SheetTitle
             className="text-[22px] font-normal text-[#1a0a14]"
@@ -76,7 +87,7 @@ export function ExportDrawer({ open, onOpenChange, theme }: Props) {
 
         <div className="flex-1 overflow-hidden px-6 py-5 flex flex-col gap-4">
           <pre
-            className="flex-1 overflow-auto thin-scroll rounded-lg bg-[#1a0a14] text-[#f2ead8] p-5 font-mono text-[12px] leading-relaxed"
+            className="flex-1 min-h-0 overflow-y-auto thin-scroll rounded-lg bg-[#1a0a14] text-[#f2ead8] p-5 font-mono text-[12px] leading-relaxed"
             style={{ fontFamily: "var(--font-mono)" }}
           >
             <code>{css}</code>
