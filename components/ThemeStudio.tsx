@@ -151,9 +151,12 @@ export function ThemeStudio() {
   );
 
   const handleReset = useCallback(() => {
-    const preset = getPreset(theme.name) ?? DEFAULT_PRESET;
-    setTheme(cloneTheme(preset));
-  }, [theme.name]);
+    setTheme((prev) => {
+      const preset = getPreset(prev.name) ?? DEFAULT_PRESET;
+      return cloneTheme(preset);
+    });
+    setMode("light");
+  }, []);
 
   const controlPanelEl = useMemo(
     () => (
