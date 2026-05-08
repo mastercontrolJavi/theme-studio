@@ -208,7 +208,7 @@ export function PreviewPanel({ theme, mode }: Props) {
         </Select>
       </Row>
 
-      <Row label="skeleton">
+      <Row label="loading state">
         <div className="w-full max-w-md flex flex-col gap-2">
           <Skeleton className="h-4 w-48" style={{ animation: "skeleton-pulse 1.5s ease-in-out infinite" }} />
           <Skeleton className="h-4 w-64" style={{ animation: "skeleton-pulse 1.5s ease-in-out infinite", animationDelay: "0.15s" }} />
