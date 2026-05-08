@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Sliders } from "lucide-react";
 import {
   Sheet,
@@ -160,23 +160,20 @@ export function ThemeStudio() {
     }));
   }, [theme.name]);
 
-  const controlPanelEl = useMemo(
-    () => (
-      <ControlPanel
-        theme={theme}
-        mode={mode}
-        onModeChange={setMode}
-        activePreset={theme.name}
-        onPresetSelect={handlePresetSelect}
-        onVarChange={handleVarChange}
-        onReset={handleReset}
-        onExportClick={() => {
-          setExportOpen(true);
-          setMobileSheetOpen(false);
-        }}
-      />
-    ),
-    [theme, mode, handlePresetSelect, handleVarChange, handleReset]
+  const controlPanelEl = (
+    <ControlPanel
+      theme={theme}
+      mode={mode}
+      onModeChange={setMode}
+      activePreset={theme.name}
+      onPresetSelect={handlePresetSelect}
+      onVarChange={handleVarChange}
+      onReset={handleReset}
+      onExportClick={() => {
+        setExportOpen(true);
+        setMobileSheetOpen(false);
+      }}
+    />
   );
 
   return (
