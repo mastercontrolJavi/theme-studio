@@ -151,8 +151,13 @@ export function ThemeStudio() {
   );
 
   const handleReset = useCallback(() => {
-    const preset = getPreset(theme.name) ?? DEFAULT_PRESET;
-    setTheme(cloneTheme(preset));
+    const preset = getPreset(theme.name);
+    if (!preset) return;
+    setTheme((prev) => ({
+      ...prev,
+      light: { ...preset.light },
+      dark: { ...preset.dark },
+    }));
   }, [theme.name]);
 
   const controlPanelEl = useMemo(
