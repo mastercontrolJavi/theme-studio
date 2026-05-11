@@ -11,6 +11,7 @@ import {
 import { ControlPanel } from "./ControlPanel";
 import { PreviewPanel } from "./PreviewPanel";
 import { ExportDrawer } from "./ExportDrawer";
+import { Logo } from "./Logo";
 import { DEFAULT_PRESET, PRESETS, getPreset } from "@/lib/themes";
 import {
   CSS_VARS,
@@ -181,12 +182,7 @@ export function ThemeStudio() {
       {/* Header */}
       <header className="h-[52px] shrink-0 border-b border-[#d4c8bc] bg-[#ede7de] flex items-center justify-between px-5 sm:px-6">
         <div className="flex items-center gap-3">
-          <div
-            className="h-7 w-7 rounded-md bg-[#8b1a4a] flex items-center justify-center text-[#faf6f0] font-mono text-[12px]"
-            aria-hidden
-          >
-            ts
-          </div>
+          <Logo size={28} />
           <span
             className="text-[18px] font-medium text-[#1a0a14]"
             style={{ fontFamily: "var(--font-display)" }}
