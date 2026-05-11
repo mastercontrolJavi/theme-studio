@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Sliders } from "lucide-react";
+import { HelpCircle, Sliders } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -11,6 +11,7 @@ import {
 import { ControlPanel } from "./ControlPanel";
 import { PreviewPanel } from "./PreviewPanel";
 import { ExportDrawer } from "./ExportDrawer";
+import { HelpModal } from "./HelpModal";
 import { Logo } from "./Logo";
 import { DEFAULT_PRESET, PRESETS, getPreset } from "@/lib/themes";
 import {
@@ -94,6 +95,7 @@ export function ThemeStudio() {
   const [theme, setTheme] = useState<ThemeConfig>(() => cloneTheme(DEFAULT_PRESET));
   const [mode, setMode] = useState<Mode>("light");
   const [exportOpen, setExportOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -190,32 +192,45 @@ export function ThemeStudio() {
             Theme Studio
           </span>
         </div>
-        <div className="hidden sm:flex items-center gap-3 font-mono text-[11px] text-[#8a7a72]">
-          <span>by Javier Padilla</span>
-          <span className="text-[#d4c8bc]">·</span>
-          <a
-            href="https://javiertpadilla.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#8b1a4a] hover:text-[#6e1239] transition-colors"
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            className="flex items-center gap-1.5 font-mono text-[11px] text-[#8a7a72] hover:text-[#8b1a4a] transition-colors cursor-pointer"
+            aria-label="Open guide"
           >
-            javiertpadilla.com
-          </a>
-        </div>
-        <div className="sm:hidden font-mono text-[11px] text-[#8b1a4a]">
-          <a
-            href="https://javiertpadilla.com"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            javiertpadilla.com
-          </a>
+            <HelpCircle size={14} />
+            <span>Guide</span>
+          </button>
+          <div className="hidden sm:flex items-center gap-3 font-mono text-[11px] text-[#8a7a72]">
+            <span className="text-[#d4c8bc]">·</span>
+            <span>by Javier Padilla</span>
+            <span className="text-[#d4c8bc]">·</span>
+            <a
+              href="https://javiertpadilla.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#8b1a4a] hover:text-[#6e1239] transition-colors"
+            >
+              javiertpadilla.com
+            </a>
+          </div>
+          <div className="sm:hidden font-mono text-[11px] text-[#8b1a4a]">
+            <span className="text-[#d4c8bc] mr-3">·</span>
+            <a
+              href="https://javiertpadilla.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              javiertpadilla.com
+            </a>
+          </div>
         </div>
       </header>
 
       {/* Main layout */}
       <div className="flex-1 flex min-h-0">
-        {/* Left control panel — desktop only */}
+        {/* Left control panel - desktop only */}
         {!isMobile && (
           <aside className="w-[300px] shrink-0 border-r border-[#d4c8bc] bg-[#ede7de] flex flex-col">
             {controlPanelEl}
@@ -269,6 +284,9 @@ export function ThemeStudio() {
 
       {/* Export drawer */}
       <ExportDrawer open={exportOpen} onOpenChange={setExportOpen} theme={theme} />
+
+      {/* Help / tutorial guide */}
+      <HelpModal open={helpOpen} onOpenChange={setHelpOpen} />
     </div>
   );
 }

@@ -30,7 +30,7 @@ export function ColorInput({ varName, hslValue, onChange }: Props) {
   function commitHex(raw: string) {
     const normalized = normalizeHex(raw);
     if (!normalized) {
-      // Invalid input — reset to current
+      // Invalid input - reset to current
       setDraft(hslToHex(hslValue));
       return;
     }
