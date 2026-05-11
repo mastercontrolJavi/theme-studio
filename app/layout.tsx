@@ -24,7 +24,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Theme Studio — by Javier Padilla",
+  title: "Theme Studio - by Javier Padilla",
   description:
     "An editor for shadcn/ui themes. Live preview, presets, and copy-paste exports.",
 };

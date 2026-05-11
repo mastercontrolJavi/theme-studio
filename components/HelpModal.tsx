@@ -121,7 +121,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
             How to Use Theme Studio
           </SheetTitle>
           <SheetDescription className="text-[#8a7a72] text-[12px] font-mono">
-            A complete walkthrough of every feature — start to finish.
+            A complete walkthrough of every feature - start to finish.
           </SheetDescription>
         </div>
 
@@ -135,8 +135,8 @@ export function HelpModal({ open, onOpenChange }: Props) {
               <strong className="font-medium text-[#1a0a14]">shadcn/ui</strong>{" "}
               projects. shadcn/ui components are styled entirely through CSS
               custom properties (variables), so swapping a handful of
-              HSL values changes the look of your entire UI — buttons, cards,
-              inputs, alerts, and more — all at once.
+              HSL values changes the look of your entire UI - buttons, cards,
+              inputs, alerts, and more - all at once.
             </P>
             <P>
               The workflow is simple: pick a preset palette as your
@@ -158,7 +158,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
             </P>
             <div className="flex flex-col gap-0 rounded-md border border-[#d4c8bc] overflow-hidden">
               {[
-                ["Ivory", "Warm off-white base with deep rose accents — the default."],
+                ["Ivory", "Warm off-white base with deep rose accents - the default."],
                 ["Zinc", "Neutral gray scale, clean and versatile for any product."],
                 ["Midnight", "Deep, moody darks with muted blue-gray highlights."],
                 ["Sage", "Earthy greens and warm neutrals, calm and natural."],
@@ -176,7 +176,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
               ))}
             </div>
             <Tip>
-              Switching presets resets all your color overrides — it&apos;s a
+              Switching presets resets all your color overrides - it&apos;s a
               fresh start from that palette. If you want to keep your
               changes, export first.
             </Tip>
@@ -190,7 +190,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
               Use the{" "}
               <strong className="font-medium text-[#1a0a14]">Mode</strong>{" "}
               toggle to switch between editing your light and dark
-              palettes. Both modes live inside the same theme — your
+              palettes. Both modes live inside the same theme - your
               exported CSS will include a{" "}
               <Mono>:root</Mono> block for light and a{" "}
               <Mono>.dark</Mono> block for dark, so your shadcn/ui
@@ -200,7 +200,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
             <P>
               Every color variable is independently editable per mode.
               Your primary brand color in light mode can differ from
-              the one used in dark mode — Theme Studio tracks them
+              the one used in dark mode - Theme Studio tracks them
               separately.
             </P>
             <Tip>
@@ -247,7 +247,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
               </div>
             </div>
             <P>
-              Both inputs stay in sync — changing one updates the other.
+              Both inputs stay in sync - changing one updates the other.
               The preview panel reflects your change instantly without
               any save or apply step.
             </P>
@@ -269,7 +269,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
               />
               <GroupRow
                 label="Primary"
-                description="Your brand's main action color — used for primary buttons, active states, links, and key interactive elements."
+                description="Your brand's main action color - used for primary buttons, active states, links, and key interactive elements."
               />
               <GroupRow
                 label="Secondary"
@@ -322,7 +322,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
               ))}
             </ul>
             <P>
-              Every component updates the moment you change a color —
+              Every component updates the moment you change a color -
               no save button, no refresh needed. Toggle between light
               and dark mode to see how your theme looks in both contexts.
             </P>
@@ -340,7 +340,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
             </P>
             <P>
               You can also switch to a different preset using the
-              dropdown — this implicitly resets the theme to that
+              dropdown - this implicitly resets the theme to that
               preset&apos;s defaults, giving you a clean slate to
               customize from.
             </P>
@@ -353,7 +353,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
             <P>
               Your theme is automatically encoded into the page URL as
               query parameters. As soon as you change any color, the
-              address bar updates — no save button required.
+              address bar updates - no save button required.
             </P>
             <P>
               To share your customization, copy the URL from your
@@ -377,7 +377,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
               When you&apos;re happy with your theme, click{" "}
               <strong className="font-medium text-[#1a0a14]">Export Theme</strong>{" "}
               at the bottom of the control panel. A panel slides up
-              showing the generated CSS — a complete{" "}
+              showing the generated CSS - a complete{" "}
               <Mono>@layer base</Mono> block with both{" "}
               <Mono>:root</Mono> (light) and{" "}
               <Mono>.dark</Mono> variable definitions.
@@ -388,7 +388,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
                 ["1", 'Click “Copy to clipboard” or “Download globals.css”.'],
                 ["2", "Open your project's app/globals.css file."],
                 ["3", "Paste the block, replacing any existing @layer base block."],
-                ["4", "Save the file — your components will update immediately."],
+                ["4", "Save the file - your components will update immediately."],
               ].map(([step, text]) => (
                 <div key={step} className="flex gap-2.5">
                   <span className="shrink-0 font-mono text-[10px] text-[#8b1a4a] w-4 text-right pt-0.5">{step}.</span>
@@ -399,7 +399,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
             <Tip>
               The exported CSS works with any shadcn/ui project
               regardless of the shadcn version or how your components were
-              installed — it only touches CSS variables, nothing else.
+              installed - it only touches CSS variables, nothing else.
             </Tip>
           </Section>
 
