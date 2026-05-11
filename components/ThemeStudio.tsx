@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Sliders } from "lucide-react";
 import {
   Sheet,
@@ -151,30 +151,29 @@ export function ThemeStudio() {
   );
 
   const handleReset = useCallback(() => {
-    setTheme((prev) => {
-      const preset = getPreset(prev.name) ?? DEFAULT_PRESET;
-      return cloneTheme(preset);
-    });
-    setMode("light");
-  }, []);
+    const preset = getPreset(theme.name);
+    if (!preset) return;
+    setTheme((prev) => ({
+      ...prev,
+      light: { ...preset.light },
+      dark: { ...preset.dark },
+    }));
+  }, [theme.name]);
 
-  const controlPanelEl = useMemo(
-    () => (
-      <ControlPanel
-        theme={theme}
-        mode={mode}
-        onModeChange={setMode}
-        activePreset={theme.name}
-        onPresetSelect={handlePresetSelect}
-        onVarChange={handleVarChange}
-        onReset={handleReset}
-        onExportClick={() => {
-          setExportOpen(true);
-          setMobileSheetOpen(false);
-        }}
-      />
-    ),
-    [theme, mode, handlePresetSelect, handleVarChange, handleReset]
+  const controlPanelEl = (
+    <ControlPanel
+      theme={theme}
+      mode={mode}
+      onModeChange={setMode}
+      activePreset={theme.name}
+      onPresetSelect={handlePresetSelect}
+      onVarChange={handleVarChange}
+      onReset={handleReset}
+      onExportClick={() => {
+        setExportOpen(true);
+        setMobileSheetOpen(false);
+      }}
+    />
   );
 
   return (
