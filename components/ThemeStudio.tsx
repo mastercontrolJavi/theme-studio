@@ -230,7 +230,7 @@ export function ThemeStudio() {
 
       {/* Main layout */}
       <div className="flex-1 flex min-h-0">
-        {/* Left control panel — desktop only */}
+        {/* Left control panel - desktop only */}
         {!isMobile && (
           <aside className="w-[300px] shrink-0 border-r border-[#d4c8bc] bg-[#ede7de] flex flex-col">
             {controlPanelEl}
