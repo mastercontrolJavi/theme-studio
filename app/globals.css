@@ -127,3 +127,8 @@
 .thin-scroll::-webkit-scrollbar-thumb:hover {
   background: #b8a89a;
 }
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
