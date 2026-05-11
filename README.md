@@ -2,16 +2,16 @@
 
 A live editor for shadcn/ui themes. Pick a preset, tune individual variables, share the URL, copy the CSS.
 
-> Portfolio piece by [Javier Padilla](https://javiertpadilla.com) — the only light-mode app in a deliberately dark-mode portfolio.
+> Portfolio piece by [Javier Padilla](https://javiertpadilla.com) - the only light-mode app in a deliberately dark-mode portfolio.
 
 ## What it does
 
-- **5 preset themes** — Ivory, Zinc, Midnight, Sage, Slate — each with full light + dark palettes.
-- **Live preview** — every shadcn primitive (Button, Card, Badge, Alert, Tabs, Select, Switch, Skeleton, Input, Textarea) renders with the active theme applied via scoped CSS variables. The app chrome stays Ivory; only the preview surface reflects the theme being edited.
-- **Per-variable editing** — 19 shadcn variables organized into Base / Primary / Secondary / Semantic / Surfaces / Borders. Each row gets a swatch (click for a `react-colorful` picker), a mono label, and a hex input.
-- **URL state** — preset + mode + every override is serialized to the URL. Share a link, share a theme.
-- **Export** — one click reveals the paste-ready `@layer base` block with both `:root` and `.dark` variants. Copy to clipboard or download `globals.css`.
-- **Mobile-aware** — below 768px the sidebar collapses into a bottom sheet behind a fixed “Customize” pill.
+- **5 preset themes** - Ivory, Zinc, Midnight, Sage, Slate — each with full light + dark palettes.
+- **Live preview** - every shadcn primitive (Button, Card, Badge, Alert, Tabs, Select, Switch, Skeleton, Input, Textarea) renders with the active theme applied via scoped CSS variables. The app chrome stays Ivory; only the preview surface reflects the theme being edited.
+- **Per-variable editing** - 19 shadcn variables organized into Base / Primary / Secondary / Semantic / Surfaces / Borders. Each row gets a swatch (click for a `react-colorful` picker), a mono label, and a hex input.
+- **URL state** - preset + mode + every override is serialized to the URL. Share a link, share a theme.
+- **Export** - one click reveals the paste-ready `@layer base` block with both `:root` and `.dark` variants. Copy to clipboard or download `globals.css`.
+- **Mobile-aware** - below 768px the sidebar collapses into a bottom sheet behind a fixed “Customize” pill.
 
 ## Stack
 
