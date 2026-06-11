@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { hexToHsl, hslToHex, normalizeHex } from "@/lib/colorUtils";
+import { hexToHsl, hslToHex, normalizeHex, parseHsl } from "@/lib/colorUtils";
 import type { CSSVar } from "@/lib/types";
 
 // react-colorful is client-only; SSR-disabled to avoid hydration mismatch
@@ -22,10 +22,13 @@ export function ColorInput({ varName, hslValue, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<string>(hslToHex(hslValue));
 
-  // Re-sync local draft when value changes externally (preset switch, URL load)
-  useEffect(() => {
+  // Re-sync local draft when value changes externally (preset switch, URL
+  // load) — render-time state adjustment, per React's derived-state pattern.
+  const [prevHsl, setPrevHsl] = useState(hslValue);
+  if (prevHsl !== hslValue) {
+    setPrevHsl(hslValue);
     setDraft(hslToHex(hslValue));
-  }, [hslValue]);
+  }
 
   function commitHex(raw: string) {
     const normalized = normalizeHex(raw);
@@ -40,6 +43,7 @@ export function ColorInput({ varName, hslValue, onChange }: Props) {
   }
 
   const currentHex = hslToHex(hslValue);
+  const parsed = parseHsl(hslValue);
 
   return (
     <div className="flex items-center gap-2.5 py-1.5">
@@ -48,7 +52,7 @@ export function ColorInput({ varName, hslValue, onChange }: Props) {
           <button
             type="button"
             aria-label={`Pick color for ${varName}`}
-            className="h-6 w-6 shrink-0 rounded border border-[#d4c8bc] hover:border-[#b8a89a] transition-colors cursor-pointer ring-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8b1a4a]"
+            className="h-6 w-6 shrink-0 rounded-md border border-ivory-border hover:border-ivory-border-strong hover:scale-105 transition-[border-color,transform] cursor-pointer shadow-[inset_0_1px_2px_rgba(0,0,0,0.18),inset_0_-1px_1px_rgba(255,255,255,0.25)] ring-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent"
             style={{ background: currentHex }}
           />
         </PopoverTrigger>
@@ -56,7 +60,7 @@ export function ColorInput({ varName, hslValue, onChange }: Props) {
           align="start"
           side="right"
           sideOffset={8}
-          className="w-auto p-3 rounded-md border-[#d4c8bc] bg-[#faf6f0] shadow-lg"
+          className="w-auto p-3 rounded-[10px] border-ivory-border bg-ivory-base shadow-[0_12px_32px_-8px_rgba(26,10,20,0.28)]"
         >
           <div className="color-picker-wrapper">
             <HexColorPicker
@@ -69,7 +73,7 @@ export function ColorInput({ varName, hslValue, onChange }: Props) {
             />
           </div>
           <div className="mt-2 flex items-center gap-2">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-[#8a7a72]">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-ivory-muted">
               hex
             </span>
             <input
@@ -83,15 +87,22 @@ export function ColorInput({ varName, hslValue, onChange }: Props) {
                   setOpen(false);
                 }
               }}
-              className="flex-1 h-7 rounded border border-[#d4c8bc] bg-[#faf6f0] px-2 font-mono text-[11px] text-[#1a0a14] focus:outline-none focus:border-[#8b1a4a]"
+              className="flex-1 h-7 rounded border border-ivory-border bg-ivory-base px-2 font-mono text-[11px] text-ivory-ink focus:outline-none focus:border-ivory-accent"
             />
           </div>
         </PopoverContent>
       </Popover>
 
-      <span className="font-mono text-[12px] text-[#1a0a14] flex-1 truncate">
-        --{varName}
-      </span>
+      <div className="flex-1 min-w-0 flex flex-col">
+        <span className="font-mono text-[11px] text-ivory-ink truncate">
+          --{varName}
+        </span>
+        {parsed && (
+          <span className="font-mono text-[8.5px] text-ivory-faint">
+            {Math.round(parsed.h)} {Math.round(parsed.s)}% {Math.round(parsed.l)}%
+          </span>
+        )}
+      </div>
 
       <input
         type="text"
@@ -105,7 +116,7 @@ export function ColorInput({ varName, hslValue, onChange }: Props) {
           }
         }}
         spellCheck={false}
-        className="w-[80px] h-7 rounded border border-[#d4c8bc] bg-[#faf6f0] px-2 font-mono text-[11px] text-[#8a7a72] hover:text-[#1a0a14] focus:text-[#1a0a14] focus:outline-none focus:border-[#8b1a4a] focus:bg-white transition-colors"
+        className="w-19.5 h-6.5 rounded-[5px] border border-ivory-border bg-ivory-base px-2 font-mono text-[10.5px] text-ivory-muted hover:text-ivory-ink focus:text-ivory-ink focus:outline-none focus:border-ivory-accent focus:bg-white transition-colors"
       />
 
       <style jsx global>{`
