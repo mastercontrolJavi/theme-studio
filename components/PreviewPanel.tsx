@@ -25,12 +25,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Mode, ThemeConfig, ThemeValues } from "@/lib/types";
+import type { Mode, ThemeValues } from "@/lib/types";
 import { CSS_VARS } from "@/lib/types";
 
 interface Props {
-  theme: ThemeConfig;
+  name: string;
   mode: Mode;
+  /** Display values — these morph during preset/mode transitions. */
+  values: ThemeValues;
 }
 
 function buildPreviewVars(values: ThemeValues): CSSProperties {
@@ -42,56 +44,73 @@ function buildPreviewVars(values: ThemeValues): CSSProperties {
   return vars as CSSProperties;
 }
 
-function Row({
+/** Section with a mono kicker, hairline rule, and optional right-aligned hint. */
+function Section({
   label,
+  hint,
   children,
 }: {
   label: string;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section>
-      <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#b4a49c] mb-3">
-        {label}
+    <section className="flex flex-col gap-3.5">
+      <div className="flex items-center gap-3">
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground whitespace-nowrap">
+          {label}
+        </span>
+        <span className="flex-1 h-px bg-border" />
+        {hint && (
+          <span className="font-mono text-[9.5px] text-muted-foreground opacity-70 whitespace-nowrap">
+            {hint}
+          </span>
+        )}
       </div>
       <div className="flex flex-wrap items-start gap-3">{children}</div>
     </section>
   );
 }
 
-export function PreviewPanel({ theme, mode }: Props) {
-  const previewVars = buildPreviewVars(theme[mode]);
+export function PreviewPanel({ name, mode, values }: Props) {
+  const previewVars = buildPreviewVars(values);
 
   return (
     <div
-      className="preview-surface rounded-xl p-6 sm:p-8 space-y-8 ring-1 ring-[#d4c8bc]"
+      className="preview-surface rounded-2xl p-6 sm:px-8 sm:pt-7.5 sm:pb-8.5 space-y-7.5"
       style={previewVars}
     >
-      <header className="flex items-baseline justify-between gap-4 pb-4 border-b border-border/60">
-        <h2
-          className="text-[clamp(20px,2.5vw,28px)] font-normal tracking-tight"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          {theme.name}{" "}
-          <span className="text-muted-foreground font-mono text-[12px] tracking-normal ml-2">
+      <header className="flex items-baseline justify-between gap-4 pb-4.5 border-b border-border">
+        <div className="flex items-baseline gap-3">
+          <h2
+            className="text-[clamp(24px,2.4vw,31px)] font-medium tracking-tight m-0"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            {name}
+          </h2>
+          <span className="font-mono text-[12px] text-muted-foreground capitalize">
             {mode}
           </span>
-        </h2>
-        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        </div>
+        <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+          <span
+            className="w-1.5 h-1.5 rounded-full bg-primary"
+            style={{ animation: "ts-livepulse 2s ease-in-out infinite" }}
+          />
           live preview
         </span>
       </header>
 
-      <Row label="buttons">
+      <Section label="buttons">
         <Button>Default</Button>
         <Button variant="secondary">Secondary</Button>
         <Button variant="outline">Outline</Button>
         <Button variant="ghost">Ghost</Button>
         <Button variant="destructive">Destructive</Button>
-      </Row>
+      </Section>
 
-      <Row label="inputs">
-        <div className="flex flex-col gap-2 max-w-xs flex-1 min-w-[220px]">
+      <Section label="form">
+        <div className="flex flex-col gap-2 max-w-xs flex-1 min-w-55">
           <Label htmlFor="preview-input" className="text-xs">
             Email address
           </Label>
@@ -101,7 +120,7 @@ export function PreviewPanel({ theme, mode }: Props) {
             type="email"
           />
         </div>
-        <div className="flex flex-col gap-2 max-w-xs flex-1 min-w-[220px]">
+        <div className="flex flex-col gap-2 max-w-xs flex-1 min-w-55">
           <Label htmlFor="preview-textarea" className="text-xs">
             Message
           </Label>
@@ -111,12 +130,17 @@ export function PreviewPanel({ theme, mode }: Props) {
             rows={3}
           />
         </div>
-      </Row>
+      </Section>
 
-      <Row label="card">
-        <Card className="max-w-sm w-full">
+      <Section label="card">
+        <Card className="max-w-sm w-full shadow-[0_1px_2px_rgba(0,0,0,0.04),0_10px_24px_-14px_rgba(0,0,0,0.3)]">
           <CardHeader>
-            <CardTitle>Connection ready</CardTitle>
+            <CardTitle
+              className="text-[21px] font-medium tracking-tight"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              Connection ready
+            </CardTitle>
             <CardDescription>
               Your project is linked. Deploy whenever you&apos;re happy with this
               theme.
@@ -136,16 +160,16 @@ export function PreviewPanel({ theme, mode }: Props) {
             </Button>
           </CardFooter>
         </Card>
-      </Row>
+      </Section>
 
-      <Row label="badges">
+      <Section label="badges">
         <Badge>Default</Badge>
         <Badge variant="secondary">Secondary</Badge>
         <Badge variant="outline">Outline</Badge>
         <Badge variant="destructive">Destructive</Badge>
-      </Row>
+      </Section>
 
-      <Row label="alerts">
+      <Section label="alerts">
         <div className="flex flex-col gap-3 w-full max-w-xl">
           <Alert>
             <AlertTitle>Heads up</AlertTitle>
@@ -161,16 +185,16 @@ export function PreviewPanel({ theme, mode }: Props) {
             </AlertDescription>
           </Alert>
         </div>
-      </Row>
+      </Section>
 
-      <Row label="controls">
-        <div className="flex items-center gap-2.5 min-w-[180px]">
+      <Section label="controls">
+        <div className="flex items-center gap-2.5 min-w-45">
           <Switch id="preview-switch" defaultChecked />
           <Label htmlFor="preview-switch" className="text-sm cursor-pointer">
             Notifications
           </Label>
         </div>
-        <Tabs defaultValue="overview" className="min-w-[280px]">
+        <Tabs defaultValue="overview" className="min-w-70">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -206,17 +230,17 @@ export function PreviewPanel({ theme, mode }: Props) {
             <SelectItem value="hnd1">ap-northeast-1 · hnd1</SelectItem>
           </SelectContent>
         </Select>
-      </Row>
+      </Section>
 
-      <Row label="loading state">
+      <Section label="loading state">
         <div className="w-full max-w-md flex flex-col gap-2">
           <Skeleton className="h-4 w-48" style={{ animation: "skeleton-pulse 1.5s ease-in-out infinite" }} />
           <Skeleton className="h-4 w-64" style={{ animation: "skeleton-pulse 1.5s ease-in-out infinite", animationDelay: "0.15s" }} />
           <Skeleton className="h-4 w-40" style={{ animation: "skeleton-pulse 1.5s ease-in-out infinite", animationDelay: "0.3s" }} />
         </div>
-      </Row>
+      </Section>
 
-      <Row label="palette">
+      <Section label="palette" hint={`${CSS_VARS.length} variables`}>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 w-full">
           {(
             [
@@ -236,11 +260,11 @@ export function PreviewPanel({ theme, mode }: Props) {
           ).map((key) => (
             <div
               key={key}
-              className="flex items-center gap-2 rounded-md ring-1 ring-border bg-card/50 px-2 py-1.5"
+              className="flex items-center gap-2 rounded-lg ring-1 ring-border bg-card px-2.5 py-2"
             >
               <div
-                className="h-4 w-4 rounded-sm ring-1 ring-foreground/15 shrink-0"
-                style={{ background: `hsl(${theme[mode][key]})` }}
+                className="h-4 w-4 rounded-[5px] ring-1 ring-foreground/15 shrink-0"
+                style={{ background: `hsl(${values[key]})` }}
               />
               <span className="font-mono text-[10px] text-muted-foreground truncate">
                 {key}
@@ -248,7 +272,7 @@ export function PreviewPanel({ theme, mode }: Props) {
             </div>
           ))}
         </div>
-      </Row>
+      </Section>
     </div>
   );
 }

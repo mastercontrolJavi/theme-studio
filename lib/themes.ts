@@ -1,4 +1,5 @@
-import type { ThemeConfig } from "./types";
+import { formatHsl, hexToHsl, hslToHex, parseHsl } from "./colorUtils";
+import type { Mode, ThemeConfig, ThemeValues } from "./types";
 
 /**
  * Five preset themes. Each defines a complete light + dark palette.
@@ -237,4 +238,73 @@ export const DEFAULT_PRESET = PRESETS[0];
 
 export function getPreset(name: string): ThemeConfig | undefined {
   return PRESETS.find((p) => p.name === name);
+}
+
+/**
+ * Thumbnail swatch bands for the paint-chip preset gallery:
+ * [background, primary, accent, secondary, foreground] as hex.
+ */
+export function chipBands(theme: ThemeConfig, mode: Mode): string[] {
+  const v = theme[mode];
+  return (
+    ["background", "primary", "accent", "secondary", "foreground"] as const
+  ).map((k) => hslToHex(v[k]));
+}
+
+const clamp = (n: number, a: number, b: number) => Math.min(b, Math.max(a, n));
+
+/**
+ * Seed generator: one color in, a balanced light + dark palette out.
+ * The seed's hue carries through every variable; chroma is clamped so
+ * neutrals stay neutral and saturated seeds don't blow out surfaces.
+ */
+export function genFromSeed(hex: string): ThemeConfig {
+  const seedHsl = parseHsl(hexToHsl(hex) ?? "0 0% 50%") ?? { h: 0, s: 0, l: 50 };
+  const h = seedHsl.h;
+  const chroma = clamp(seedHsl.s, 18, 80);
+  const tint = (s: number, l: number) => formatHsl(h, s, l);
+
+  const light: ThemeValues = {
+    background: tint(Math.min(chroma, 24), 97),
+    foreground: tint(Math.min(chroma, 30), 10),
+    card: tint(Math.min(chroma, 20), 99),
+    "card-foreground": tint(Math.min(chroma, 30), 10),
+    popover: tint(Math.min(chroma, 20), 99),
+    "popover-foreground": tint(Math.min(chroma, 30), 10),
+    primary: formatHsl(h, chroma, clamp(seedHsl.l, 34, 50)),
+    "primary-foreground": tint(Math.min(chroma, 24), 98),
+    secondary: tint(Math.min(chroma, 22), 92),
+    "secondary-foreground": tint(Math.min(chroma, 30), 14),
+    muted: tint(Math.min(chroma, 20), 92),
+    "muted-foreground": tint(Math.min(chroma, 16), 46),
+    accent: tint(Math.min(chroma + 6, 40), 93),
+    "accent-foreground": formatHsl(h, chroma, clamp(seedHsl.l - 6, 28, 42)),
+    destructive: "0 72% 48%",
+    "destructive-foreground": tint(Math.min(chroma, 24), 98),
+    border: tint(Math.min(chroma, 20), 84),
+    input: tint(Math.min(chroma, 20), 84),
+    ring: formatHsl(h, chroma, clamp(seedHsl.l, 34, 50)),
+  };
+  const dark: ThemeValues = {
+    background: tint(Math.min(chroma, 22), 8),
+    foreground: tint(Math.min(chroma, 24), 96),
+    card: tint(Math.min(chroma, 20), 12),
+    "card-foreground": tint(Math.min(chroma, 24), 96),
+    popover: tint(Math.min(chroma, 20), 12),
+    "popover-foreground": tint(Math.min(chroma, 24), 96),
+    primary: formatHsl(h, clamp(chroma + 4, 30, 78), clamp(seedHsl.l + 14, 52, 64)),
+    "primary-foreground": tint(Math.min(chroma, 24), 8),
+    secondary: tint(Math.min(chroma, 18), 18),
+    "secondary-foreground": tint(Math.min(chroma, 24), 96),
+    muted: tint(Math.min(chroma, 16), 18),
+    "muted-foreground": tint(Math.min(chroma, 16), 64),
+    accent: formatHsl(h, clamp(chroma, 24, 50), 24),
+    "accent-foreground": formatHsl(h, clamp(chroma, 30, 70), 80),
+    destructive: "0 62% 48%",
+    "destructive-foreground": tint(Math.min(chroma, 24), 96),
+    border: tint(Math.min(chroma, 16), 22),
+    input: tint(Math.min(chroma, 16), 22),
+    ring: formatHsl(h, clamp(chroma + 4, 30, 78), clamp(seedHsl.l + 14, 52, 64)),
+  };
+  return { name: "Custom", light, dark };
 }
