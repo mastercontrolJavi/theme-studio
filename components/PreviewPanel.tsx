@@ -31,8 +31,14 @@ import { CSS_VARS } from "@/lib/types";
 interface Props {
   name: string;
   mode: Mode;
-  /** Display values — these morph during preset/mode transitions. */
+  /** Display values - these morph during preset/mode transitions. */
   values: ThemeValues;
+  /**
+   * Replaces the "live preview" indicator in the header. The comparison view
+   * passes each mode's contrast score here, where two pulsing dots would be
+   * noise and the numbers are the reason you opened the view.
+   */
+  headerNote?: React.ReactNode;
 }
 
 function buildPreviewVars(values: ThemeValues): CSSProperties {
@@ -43,6 +49,45 @@ function buildPreviewVars(values: ThemeValues): CSSProperties {
   vars["--radius"] = "0.5rem";
   return vars as CSSProperties;
 }
+
+const DEPLOYS: Array<{
+  commit: string;
+  branch: string;
+  status: string;
+  duration: string;
+  badge: "default" | "secondary" | "destructive" | "outline";
+  selected?: boolean;
+}> = [
+  {
+    commit: "a3f9c21",
+    branch: "main",
+    status: "Ready",
+    duration: "42s",
+    badge: "default",
+    selected: true,
+  },
+  {
+    commit: "7b2e004",
+    branch: "main",
+    status: "Ready",
+    duration: "38s",
+    badge: "secondary",
+  },
+  {
+    commit: "c81d5fa",
+    branch: "fix/auth",
+    status: "Building",
+    duration: "12s",
+    badge: "outline",
+  },
+  {
+    commit: "19ee7b3",
+    branch: "main",
+    status: "Error",
+    duration: "8s",
+    badge: "destructive",
+  },
+];
 
 /** Section with a mono kicker, hairline rule, and optional right-aligned hint. */
 function Section({
@@ -72,12 +117,21 @@ function Section({
   );
 }
 
-export function PreviewPanel({ name, mode, values }: Props) {
+export function PreviewPanel({ name, mode, values, headerNote }: Props) {
   const previewVars = buildPreviewVars(values);
 
   return (
     <div
-      className="preview-surface rounded-2xl p-6 sm:px-8 sm:pt-7.5 sm:pb-8.5 space-y-7.5"
+      /*
+       * The `dark` class is what makes this an honest dark preview. The dark
+       * variant is defined as `&:is(.dark *)`, so without an ancestor carrying
+       * the class every dark: utility baked into the shadcn components stayed
+       * inert and dark mode was previewing on swapped variables alone.
+       */
+      className={[
+        "preview-surface rounded-2xl p-6 sm:px-8 sm:pt-7.5 sm:pb-8.5 space-y-7.5",
+        mode === "dark" ? "dark" : "",
+      ].join(" ")}
       style={previewVars}
     >
       <header className="flex items-baseline justify-between gap-4 pb-4.5 border-b border-border">
@@ -92,13 +146,15 @@ export function PreviewPanel({ name, mode, values }: Props) {
             {mode}
           </span>
         </div>
-        <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-          <span
-            className="w-1.5 h-1.5 rounded-full bg-primary"
-            style={{ animation: "ts-livepulse 2s ease-in-out infinite" }}
-          />
-          live preview
-        </span>
+        {headerNote ?? (
+          <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+            <span
+              className="w-1.5 h-1.5 rounded-full bg-primary"
+              style={{ animation: "ts-livepulse 2s ease-in-out infinite" }}
+            />
+            live preview
+          </span>
+        )}
       </header>
 
       <Section label="buttons">
@@ -124,10 +180,14 @@ export function PreviewPanel({ name, mode, values }: Props) {
           <Label htmlFor="preview-textarea" className="text-xs">
             Message
           </Label>
+          {/* resize-none: the native browser resize grip is unthemed chrome
+              that can't take the theme's colours, and it doesn't belong on a
+              read-only preview anyway. */}
           <Textarea
             id="preview-textarea"
             placeholder="Type a longer message..."
             rows={3}
+            className="resize-none"
           />
         </div>
       </Section>
@@ -237,6 +297,72 @@ export function PreviewPanel({ name, mode, values }: Props) {
           <Skeleton className="h-4 w-48" style={{ animation: "skeleton-pulse 1.5s ease-in-out infinite" }} />
           <Skeleton className="h-4 w-64" style={{ animation: "skeleton-pulse 1.5s ease-in-out infinite", animationDelay: "0.15s" }} />
           <Skeleton className="h-4 w-40" style={{ animation: "skeleton-pulse 1.5s ease-in-out infinite", animationDelay: "0.3s" }} />
+        </div>
+      </Section>
+
+      {/* The one surface the rest of the preview was missing: --muted as a
+          real fill, --border doing structural work, and --accent visible
+          without needing a hover or an open menu. */}
+      <Section label="data table" hint="border · muted · accent">
+        {/* The table keeps its natural column widths and scrolls inside this
+            wrapper rather than stretching the panel on a narrow screen. */}
+        <div className="w-full overflow-x-auto rounded-xl ring-1 ring-border bg-card">
+          <table className="w-full border-collapse text-left text-[13px]">
+            <caption className="sr-only">Recent deploys</caption>
+            <thead>
+              <tr className="bg-muted">
+                {["Commit", "Branch", "Status", "Duration"].map((h) => (
+                  <th
+                    key={h}
+                    scope="col"
+                    className="px-3 py-2 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {DEPLOYS.map((row) => (
+                <tr
+                  key={row.commit}
+                  aria-selected={row.selected || undefined}
+                  className={[
+                    "border-t border-border transition-colors",
+                    row.selected
+                      ? "bg-accent text-accent-foreground"
+                      : "hover:bg-muted/60",
+                  ].join(" ")}
+                >
+                  <td className="px-3 py-2 font-mono text-[12px]">
+                    {row.commit}
+                  </td>
+                  <td className="px-3 py-2 font-mono text-[12px] text-muted-foreground">
+                    {row.branch}
+                  </td>
+                  <td className="px-3 py-2">
+                    <Badge variant={row.badge}>{row.status}</Badge>
+                  </td>
+                  <td className="px-3 py-2 font-mono text-[12px] text-muted-foreground tabular-nums">
+                    {row.duration}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="flex items-center justify-between gap-3 border-t border-border px-3 py-2">
+            <span className="font-mono text-[10px] text-muted-foreground">
+              4 of 24 deploys
+            </span>
+            <div className="flex gap-1.5">
+              <Button size="xs" variant="outline">
+                Prev
+              </Button>
+              <Button size="xs" variant="outline">
+                Next
+              </Button>
+            </div>
+          </div>
         </div>
       </Section>
 

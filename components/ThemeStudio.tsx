@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { HelpCircle, Sliders } from "lucide-react";
+import { Compass, HelpCircle, Sliders } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -14,103 +14,57 @@ import { ExportDrawer } from "./ExportDrawer";
 import { HelpModal } from "./HelpModal";
 import { SeedModal } from "./SeedModal";
 import { Logo } from "./Logo";
-import { normalizeHex } from "@/lib/colorUtils";
+import { TourOverlay } from "./TourOverlay";
 import { DEFAULT_PRESET, genFromSeed, getPreset } from "@/lib/themes";
+import {
+  applyOverrides,
+  buildUrl,
+  cloneTheme,
+  parseUrlState,
+} from "@/lib/urlState";
 import { MORPH_MS, easeInOut, lerpThemeValues } from "@/lib/morph";
+import { auditTheme, deriveForeground } from "@/lib/contrast";
 import {
   CSS_VARS,
+  SIMPLE_AUTO_PAIRS,
   type CSSVar,
+  type DetailLevel,
   type Mode,
   type ThemeConfig,
   type ThemeValues,
 } from "@/lib/types";
 
 const MOBILE_BREAKPOINT = 768;
+const DETAIL_KEY = "theme-studio:detail";
+const TOUR_KEY = "theme-studio:tour-seen";
 
-function cloneTheme(t: ThemeConfig): ThemeConfig {
-  return {
-    name: t.name,
-    light: { ...t.light },
-    dark: { ...t.dark },
-  };
+function readStoredDetail(): DetailLevel | null {
+  try {
+    const raw = window.localStorage.getItem(DETAIL_KEY);
+    return raw === "simple" || raw === "advanced" ? raw : null;
+  } catch {
+    // Storage can be unavailable (private mode, blocked cookies). The editor
+    // works fine without persistence, so this is not worth surfacing.
+    return null;
+  }
 }
 
-/**
- * URL state shape:
- *   ?p=Ivory&m=light&l.background=36+33%25+96%25...
- * Custom (seed-generated) themes are encoded by their seed:
- *   ?p=Custom&seed=6d28d9&m=dark
- * Only deltas vs the base theme are written to keep URLs short.
- */
-function parseUrlState(search: string): {
-  base: ThemeConfig;
-  seedHex: string | null;
-  mode: Mode;
-  overrides: { light: Partial<Record<CSSVar, string>>; dark: Partial<Record<CSSVar, string>> };
-} {
-  const sp = new URLSearchParams(search);
-  const mode: Mode = sp.get("m") === "dark" ? "dark" : "light";
-
-  let base: ThemeConfig | undefined;
-  let seedHex: string | null = null;
-  if (sp.get("p") === "Custom") {
-    const seed = normalizeHex(sp.get("seed") ?? "");
-    if (seed) {
-      base = genFromSeed(seed);
-      seedHex = seed;
-    }
-  } else {
-    base = getPreset(sp.get("p") ?? "");
+function hasSeenTour(): boolean {
+  try {
+    return window.localStorage.getItem(TOUR_KEY) === "1";
+  } catch {
+    // Storage unavailable: treat the tour as seen rather than showing it on
+    // every single visit.
+    return true;
   }
-  base = base ?? DEFAULT_PRESET;
-
-  const overrides: {
-    light: Partial<Record<CSSVar, string>>;
-    dark: Partial<Record<CSSVar, string>>;
-  } = { light: {}, dark: {} };
-
-  for (const v of CSS_VARS) {
-    const lv = sp.get(`l.${v}`);
-    if (lv) overrides.light[v] = lv;
-    const dv = sp.get(`d.${v}`);
-    if (dv) overrides.dark[v] = dv;
-  }
-
-  return { base, seedHex, mode, overrides };
 }
 
-function buildUrl(theme: ThemeConfig, mode: Mode, seedHex: string | null): string {
-  const sp = new URLSearchParams();
-  sp.set("p", theme.name);
-  sp.set("m", mode);
-  const base =
-    theme.name === "Custom"
-      ? seedHex
-        ? genFromSeed(seedHex)
-        : null
-      : (getPreset(theme.name) ?? null);
-  if (theme.name === "Custom" && seedHex) sp.set("seed", seedHex.replace(/^#/, ""));
-  if (base) {
-    for (const v of CSS_VARS) {
-      if (theme.light[v] !== base.light[v]) sp.set(`l.${v}`, theme.light[v]);
-      if (theme.dark[v] !== base.dark[v]) sp.set(`d.${v}`, theme.dark[v]);
-    }
+function markTourSeen() {
+  try {
+    window.localStorage.setItem(TOUR_KEY, "1");
+  } catch {
+    // Nothing to do; the tour simply will not be remembered this session.
   }
-  return `?${sp.toString()}`;
-}
-
-function applyOverrides(
-  base: ThemeConfig,
-  overrides: ReturnType<typeof parseUrlState>["overrides"]
-): ThemeConfig {
-  const next = cloneTheme(base);
-  for (const [k, v] of Object.entries(overrides.light)) {
-    if (v) next.light[k as CSSVar] = v;
-  }
-  for (const [k, v] of Object.entries(overrides.dark)) {
-    if (v) next.dark[k as CSSVar] = v;
-  }
-  return next;
 }
 
 export function ThemeStudio() {
@@ -119,13 +73,18 @@ export function ThemeStudio() {
   const [customTheme, setCustomTheme] = useState<ThemeConfig | null>(null);
   const [seedHex, setSeedHex] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("light");
-  // Display values are what the preview renders — they tween during morphs.
+  // Simple by default: a first-time visitor should see the decisions, not the
+  // token list. The choice is remembered from the first time it is changed.
+  const [detail, setDetail] = useState<DetailLevel>("simple");
+  // Display values are what the preview renders - they tween during morphs.
   const [display, setDisplay] = useState<ThemeValues>(() => ({
     ...DEFAULT_PRESET.light,
   }));
   const [exportOpen, setExportOpen] = useState(false);
   const [seedOpen, setSeedOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [compare, setCompare] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -197,6 +156,8 @@ export function ThemeStudio() {
       setSeedHex(urlSeed);
       setCustomTheme(genFromSeed(urlSeed));
     }
+    const storedDetail = readStoredDetail();
+    if (storedDetail) setDetail(storedDetail);
     setHydrated(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -211,7 +172,15 @@ export function ThemeStudio() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Sync state → URL (skip first run after hydration to avoid loop)
+  /**
+   * Sync state to the URL, debounced.
+   *
+   * A single drag across the colour picker fires ~80 state updates, and one
+   * replaceState per update runs straight into the browser's rate limit
+   * (Safari throws a SecurityError past ~100 calls in 30 seconds). Each change
+   * cancels the pending write and schedules a new one, so the address bar
+   * lands on the final value and nothing in between reaches the history API.
+   */
   useEffect(() => {
     if (!hydrated) return;
     if (skipNextUrlSync.current) {
@@ -219,8 +188,57 @@ export function ThemeStudio() {
       return;
     }
     const url = buildUrl(theme, mode, seedHex);
-    window.history.replaceState(null, "", url);
+    const t = setTimeout(() => window.history.replaceState(null, "", url), 250);
+    return () => clearTimeout(t);
   }, [theme, mode, seedHex, hydrated]);
+
+  /**
+   * Built from state rather than read off window.location, so a link copied
+   * immediately after an edit carries that edit instead of whatever the
+   * debounced write last committed.
+   */
+  const handleCopyLink = useCallback(async () => {
+    const url =
+      window.location.origin +
+      window.location.pathname +
+      buildUrl(theme, mode, seedHex);
+    try {
+      await navigator.clipboard.writeText(url);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [theme, mode, seedHex]);
+
+  // Open the tour on a first visit, but only once the control panel has
+  // actually laid out: the mobile check runs in its own effect, and the
+  // spotlight measures real elements.
+  useEffect(() => {
+    if (!hydrated || hasSeenTour()) return;
+    const t = setTimeout(() => setTourOpen(true), 450);
+    return () => clearTimeout(t);
+  }, [hydrated]);
+
+  const closeTour = useCallback(() => {
+    setTourOpen(false);
+    markTourSeen();
+  }, []);
+
+  const startTour = useCallback(() => {
+    setMobileSheetOpen(false);
+    setTourOpen(true);
+  }, []);
+
+  // Persist the detail level once hydration has settled, so the initial
+  // default never overwrites a stored preference.
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      window.localStorage.setItem(DETAIL_KEY, detail);
+    } catch {
+      // Nothing to do: the session still works, it just will not be remembered.
+    }
+  }, [detail, hydrated]);
 
   const handlePresetSelect = useCallback(
     (name: string) => {
@@ -243,15 +261,27 @@ export function ThemeStudio() {
 
   const handleVarChange = useCallback(
     (key: CSSVar, hsl: string) => {
+      // In Simple mode the label that sits on a colour is derived rather than
+      // asked for, so a ground edit writes both variables at once.
+      const pairedKey = detail === "simple" ? SIMPLE_AUTO_PAIRS[key] : undefined;
+      const pairedHsl = pairedKey
+        ? deriveForeground(hsl, theme[mode][pairedKey])
+        : undefined;
+
       setTheme((prev) => {
         const next = cloneTheme(prev);
         next[mode][key] = hsl;
+        if (pairedKey && pairedHsl) next[mode][pairedKey] = pairedHsl;
         return next;
       });
       cancelMorph();
-      updateDisplay({ ...displayRef.current, [key]: hsl });
+      updateDisplay({
+        ...displayRef.current,
+        [key]: hsl,
+        ...(pairedKey && pairedHsl ? { [pairedKey]: pairedHsl } : {}),
+      });
     },
-    [mode, cancelMorph, updateDisplay]
+    [mode, detail, theme, cancelMorph, updateDisplay]
   );
 
   const handleReset = useCallback(() => {
@@ -282,6 +312,8 @@ export function ThemeStudio() {
       customTheme={customTheme}
       mode={mode}
       onModeChange={handleModeChange}
+      detail={detail}
+      onDetailChange={setDetail}
       activePreset={theme.name}
       onPresetSelect={handlePresetSelect}
       onVarChange={handleVarChange}
@@ -294,6 +326,7 @@ export function ThemeStudio() {
         setSeedOpen(true);
         setMobileSheetOpen(false);
       }}
+      onCopyLink={handleCopyLink}
     />
   );
 
@@ -313,7 +346,7 @@ export function ThemeStudio() {
             >
               Theme Studio
             </span>
-            <span className="font-mono text-[8px] tracking-[0.22em] uppercase text-ivory-muted mt-[3px]">
+            <span className="font-mono text-[8px] tracking-[0.22em] uppercase text-ivory-muted mt-[3px] whitespace-nowrap">
               shadcn · theme editor
             </span>
           </div>
@@ -321,12 +354,24 @@ export function ThemeStudio() {
         <div className="flex items-center gap-3.5">
           <button
             type="button"
+            onClick={startTour}
+            aria-label="Take the tour"
+            className="flex items-center gap-1.5 font-mono text-[10.5px] text-ivory-muted hover:text-ivory-accent transition-colors cursor-pointer rounded-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2"
+          >
+            <Compass size={13} />
+            {/* Narrow screens keep the icon only: the header runs out of room
+                once the byline and Guide are in it. */}
+            <span className="hidden sm:inline">Take the tour</span>
+          </button>
+          <span className="hidden sm:block w-px h-3.5 bg-ivory-border" />
+          <button
+            type="button"
             onClick={() => setHelpOpen(true)}
-            className="flex items-center gap-1.5 font-mono text-[10.5px] text-ivory-muted hover:text-ivory-accent transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 font-mono text-[10.5px] text-ivory-muted hover:text-ivory-accent transition-colors cursor-pointer rounded-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2"
             aria-label="Open guide"
           >
             <HelpCircle size={13} />
-            <span>Guide</span>
+            <span className="hidden sm:inline">Guide</span>
           </button>
           <span className="hidden sm:block w-px h-3.5 bg-ivory-border" />
           <span className="hidden sm:block font-mono text-[10px] text-ivory-faint tracking-[0.04em]">
@@ -337,7 +382,7 @@ export function ThemeStudio() {
             href="https://javiertpadilla.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-[10.5px] text-ivory-accent hover:text-ivory-accent-hover transition-colors"
+            className="font-mono text-[10.5px] text-ivory-accent hover:text-ivory-accent-hover transition-colors text-right leading-tight"
           >
             by Javier Padilla
           </a>
@@ -354,9 +399,80 @@ export function ThemeStudio() {
         )}
 
         {/* Right preview */}
-        <main className="flex-1 overflow-y-auto thin-scroll">
-          <div className="px-6 pt-6 sm:px-8.5 sm:pt-7.5 pb-24 md:pb-15 max-w-[1040px] mx-auto">
-            <PreviewPanel name={theme.name} mode={mode} values={display} />
+        <main className="flex-1 overflow-y-auto overscroll-y-contain thin-scroll">
+          <div
+            className={[
+              "px-6 pt-6 sm:px-8.5 sm:pt-7.5 pb-24 md:pb-15 mx-auto",
+              compare ? "max-w-[1480px]" : "max-w-[1040px]",
+            ].join(" ")}
+          >
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ivory-muted">
+                {compare ? "Light and dark, side by side" : "Live preview"}
+              </span>
+              <div className="flex shrink-0 rounded-[9px] bg-ivory-elevated p-1 shadow-[inset_0_2px_5px_rgba(26,10,20,0.12)]">
+                {(
+                  [
+                    ["single", "Single"],
+                    ["compare", "Compare"],
+                  ] as const
+                ).map(([id, label]) => {
+                  const active = (id === "compare") === compare;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setCompare(id === "compare")}
+                      className={[
+                        "cursor-pointer rounded-[7px] px-3 py-1.5 font-mono text-[10.5px] transition-all duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent",
+                        active
+                          ? "bg-ivory-base text-ivory-ink shadow-[0_1px_3px_rgba(26,10,20,0.16)]"
+                          : "bg-transparent text-ivory-faint hover:text-ivory-muted",
+                      ].join(" ")}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {compare ? (
+              /*
+               * Comparison reads the theme directly rather than the morphing
+               * display values. Mid-tween frames are interpolations that are
+               * not in the theme, and a view whose whole job is judging the
+               * two real palettes should never show a colour that is not one
+               * of them.
+               */
+              <div className="grid gap-5 lg:grid-cols-2 items-start">
+                {(["light", "dark"] as const).map((m) => {
+                  const report = auditTheme(theme[m]);
+                  const allPass = report.passAA === report.total;
+                  return (
+                    <PreviewPanel
+                      key={m}
+                      name={theme.name}
+                      mode={m}
+                      values={theme[m]}
+                      headerNote={
+                        <span
+                          className={[
+                            "font-mono text-[10px] uppercase tracking-[0.14em]",
+                            allPass ? "text-primary" : "text-destructive",
+                          ].join(" ")}
+                        >
+                          {report.passAA}/{report.total} pass AA
+                        </span>
+                      }
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <PreviewPanel name={theme.name} mode={mode} values={display} />
+            )}
           </div>
         </main>
       </div>
@@ -381,7 +497,16 @@ export function ThemeStudio() {
         <SheetContent
           side="bottom"
           showCloseButton
-          className="h-[85vh] bg-ivory-surface border-t border-ivory-border text-ivory-ink p-0 flex flex-col"
+          className="bg-ivory-surface border-t border-ivory-border text-ivory-ink p-0 flex flex-col"
+          /*
+           * Height set inline rather than as a class. The sheet's own base
+           * styles carry `data-[side=bottom]:h-auto`, and tailwind-merge does
+           * not treat a variant-prefixed utility as conflicting with a plain
+           * one, so `h-[85vh]` lost and the sheet grew to fit its content.
+           * With the body scroll-locked by the dialog, everything above the
+           * fold, the preset gallery included, became unreachable.
+           */
+          style={{ height: "85vh" }}
         >
           <div className="px-5 pt-5 pb-3 border-b border-ivory-border">
             <SheetTitle
@@ -410,6 +535,9 @@ export function ThemeStudio() {
 
       {/* Help / tutorial guide */}
       <HelpModal open={helpOpen} onOpenChange={setHelpOpen} />
+
+      {/* First-run walkthrough, re-openable from the header */}
+      <TourOverlay open={tourOpen} onClose={closeTour} spotlight={!isMobile} />
     </div>
   );
 }
