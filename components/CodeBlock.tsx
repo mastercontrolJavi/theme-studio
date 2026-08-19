@@ -114,7 +114,7 @@ export function CodeBlock({
 }) {
   const render = language === "json" ? jsonLine : cssLine;
   return (
-    <pre className="flex-1 min-h-0 overflow-auto thin-scroll m-0 px-4.5 py-4 font-mono text-[12px] leading-[1.75]">
+    <pre className="flex-1 min-h-0 overflow-auto overscroll-contain thin-scroll m-0 px-4.5 py-4 font-mono text-[12px] leading-[1.75]">
       <code>
         {code.split("\n").map((line, i) =>
           // An empty div has no line box, which would silently swallow the

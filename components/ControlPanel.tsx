@@ -114,7 +114,7 @@ export function ControlPanel({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto overflow-x-hidden thin-scroll px-4.5 pt-4.5 pb-3.5">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain thin-scroll px-4.5 pt-4.5 pb-3.5">
         {/* Paint-chip preset gallery */}
         <section className="mb-5.5" data-tour="presets">
           <div className="flex items-center justify-between mb-3">
