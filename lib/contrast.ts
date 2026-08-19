@@ -370,3 +370,43 @@ export function formatRatio(ratio: number): string {
   const rounded = Math.round(ratio * 100) / 100;
   return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(2)}:1`;
 }
+
+/**
+ * Pick the foreground lightness that reads on `ground`, keeping the current
+ * hue and saturation so a tinted label stays tinted.
+ *
+ * Aims for AAA (7:1) with the smallest move from where the token already is,
+ * which keeps a near-white label near-white instead of snapping it to pure
+ * white. Where 7:1 is out of reach at this hue, it returns whichever end of
+ * the lightness range contrasts most, so the result is always the best
+ * available rather than a value that quietly fails.
+ */
+export function deriveForeground(
+  ground: string,
+  currentFg: string,
+  target = 7
+): string {
+  const fg = parseHsl(currentFg);
+  if (!fg) return currentFg;
+
+  const groundRgb = hslToRgb(ground);
+  const groundIsLight = groundRgb ? relativeLuminance(groundRgb) > 0.18 : true;
+
+  for (let d = 0; d <= 100; d += SEARCH_STEP) {
+    const first = groundIsLight ? fg.l - d : fg.l + d;
+    const second = groundIsLight ? fg.l + d : fg.l - d;
+    for (const l of d === 0 ? [fg.l] : [first, second]) {
+      if (l < 0 || l > 100) continue;
+      const candidate = formatHsl(fg.h, fg.s, l);
+      if (contrastRatio(candidate, ground) >= target) return candidate;
+    }
+  }
+
+  // Nothing reaches the target at this hue and saturation: take the extreme
+  // that contrasts most.
+  const darkest = formatHsl(fg.h, fg.s, 0);
+  const lightest = formatHsl(fg.h, fg.s, 100);
+  return contrastRatio(darkest, ground) >= contrastRatio(lightest, ground)
+    ? darkest
+    : lightest;
+}

@@ -17,15 +17,30 @@ import { Logo } from "./Logo";
 import { normalizeHex } from "@/lib/colorUtils";
 import { DEFAULT_PRESET, genFromSeed, getPreset } from "@/lib/themes";
 import { MORPH_MS, easeInOut, lerpThemeValues } from "@/lib/morph";
+import { deriveForeground } from "@/lib/contrast";
 import {
   CSS_VARS,
+  SIMPLE_AUTO_PAIRS,
   type CSSVar,
+  type DetailLevel,
   type Mode,
   type ThemeConfig,
   type ThemeValues,
 } from "@/lib/types";
 
 const MOBILE_BREAKPOINT = 768;
+const DETAIL_KEY = "theme-studio:detail";
+
+function readStoredDetail(): DetailLevel | null {
+  try {
+    const raw = window.localStorage.getItem(DETAIL_KEY);
+    return raw === "simple" || raw === "advanced" ? raw : null;
+  } catch {
+    // Storage can be unavailable (private mode, blocked cookies). The editor
+    // works fine without persistence, so this is not worth surfacing.
+    return null;
+  }
+}
 
 function cloneTheme(t: ThemeConfig): ThemeConfig {
   return {
@@ -119,7 +134,10 @@ export function ThemeStudio() {
   const [customTheme, setCustomTheme] = useState<ThemeConfig | null>(null);
   const [seedHex, setSeedHex] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("light");
-  // Display values are what the preview renders — they tween during morphs.
+  // Simple by default: a first-time visitor should see the decisions, not the
+  // token list. The choice is remembered from the first time it is changed.
+  const [detail, setDetail] = useState<DetailLevel>("simple");
+  // Display values are what the preview renders - they tween during morphs.
   const [display, setDisplay] = useState<ThemeValues>(() => ({
     ...DEFAULT_PRESET.light,
   }));
@@ -197,6 +215,8 @@ export function ThemeStudio() {
       setSeedHex(urlSeed);
       setCustomTheme(genFromSeed(urlSeed));
     }
+    const storedDetail = readStoredDetail();
+    if (storedDetail) setDetail(storedDetail);
     setHydrated(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -222,6 +242,17 @@ export function ThemeStudio() {
     window.history.replaceState(null, "", url);
   }, [theme, mode, seedHex, hydrated]);
 
+  // Persist the detail level once hydration has settled, so the initial
+  // default never overwrites a stored preference.
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      window.localStorage.setItem(DETAIL_KEY, detail);
+    } catch {
+      // Nothing to do: the session still works, it just will not be remembered.
+    }
+  }, [detail, hydrated]);
+
   const handlePresetSelect = useCallback(
     (name: string) => {
       const src = name === "Custom" ? customTheme : getPreset(name);
@@ -243,15 +274,27 @@ export function ThemeStudio() {
 
   const handleVarChange = useCallback(
     (key: CSSVar, hsl: string) => {
+      // In Simple mode the label that sits on a colour is derived rather than
+      // asked for, so a ground edit writes both variables at once.
+      const pairedKey = detail === "simple" ? SIMPLE_AUTO_PAIRS[key] : undefined;
+      const pairedHsl = pairedKey
+        ? deriveForeground(hsl, theme[mode][pairedKey])
+        : undefined;
+
       setTheme((prev) => {
         const next = cloneTheme(prev);
         next[mode][key] = hsl;
+        if (pairedKey && pairedHsl) next[mode][pairedKey] = pairedHsl;
         return next;
       });
       cancelMorph();
-      updateDisplay({ ...displayRef.current, [key]: hsl });
+      updateDisplay({
+        ...displayRef.current,
+        [key]: hsl,
+        ...(pairedKey && pairedHsl ? { [pairedKey]: pairedHsl } : {}),
+      });
     },
-    [mode, cancelMorph, updateDisplay]
+    [mode, detail, theme, cancelMorph, updateDisplay]
   );
 
   const handleReset = useCallback(() => {
@@ -282,6 +325,8 @@ export function ThemeStudio() {
       customTheme={customTheme}
       mode={mode}
       onModeChange={handleModeChange}
+      detail={detail}
+      onDetailChange={setDetail}
       activePreset={theme.name}
       onPresetSelect={handlePresetSelect}
       onVarChange={handleVarChange}

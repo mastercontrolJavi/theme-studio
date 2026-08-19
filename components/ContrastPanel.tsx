@@ -16,9 +16,11 @@ interface Props {
   /** The mode not currently being edited, scored so it cannot slip by unseen. */
   otherMode: { label: Mode; values: ThemeValues };
   onVarChange: (key: CSSVar, hsl: string) => void;
-  /** Controlled disclosure so Simple/Advanced can set the default later. */
+  /** Controlled disclosure, so the detail level can set the default. */
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Simple mode leads with the plain-language name and hides --var names. */
+  showRaw: boolean;
 }
 
 /** Small pass/fail chip. Never colour alone: each carries a glyph and a label. */
@@ -50,12 +52,14 @@ function PairingRow({
   onVarChange,
   onFixed,
   flash,
+  showRaw,
 }: {
   result: PairingResult;
   values: ThemeValues;
   onVarChange: (key: CSSVar, hsl: string) => void;
   onFixed: (id: string) => void;
   flash: boolean;
+  showRaw: boolean;
 }) {
   const { pairing, ratio, aa, aaa, aaLarge, aaaApplies, required } = result;
   const informational = !result.counted;
@@ -101,9 +105,15 @@ function PairingRow({
         </span>
       </div>
 
-      <div className="mt-0.5 ml-[13px] truncate font-mono text-[9px] text-ivory-faint">
-        --{pairing.fg} on --{pairing.bg}
-      </div>
+      {showRaw ? (
+        <div className="mt-0.5 ml-[13px] truncate font-mono text-[9px] text-ivory-faint">
+          --{pairing.fg} on --{pairing.bg}
+        </div>
+      ) : (
+        <div className="mt-0.5 ml-[13px] truncate text-[9.5px] text-ivory-faint">
+          {pairing.example}
+        </div>
+      )}
 
       <div className="mt-1.5 ml-[13px] flex flex-wrap items-center gap-1.5">
         {informational ? (
@@ -173,6 +183,7 @@ export function ContrastPanel({
   onVarChange,
   open,
   onOpenChange,
+  showRaw,
 }: Props) {
   const report = useMemo(() => auditTheme(values), [values]);
   const otherReport = useMemo(
@@ -245,6 +256,7 @@ export function ContrastPanel({
                 onVarChange={onVarChange}
                 onFixed={setFlashed}
                 flash={flashed === r.pairing.id}
+                showRaw={showRaw}
               />
             ))}
           </div>
@@ -269,6 +281,7 @@ export function ContrastPanel({
                 onVarChange={onVarChange}
                 onFixed={setFlashed}
                 flash={false}
+                showRaw={showRaw}
               />
             ))}
           </div>
