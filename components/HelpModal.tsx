@@ -126,7 +126,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto thin-scroll px-6 py-6 space-y-7">
+        <div className="flex-1 overflow-y-auto overscroll-y-contain thin-scroll px-6 py-6 space-y-7">
 
           {/* 1. Overview */}
           <Section number={1} icon={Palette} title="What Is Theme Studio?">
