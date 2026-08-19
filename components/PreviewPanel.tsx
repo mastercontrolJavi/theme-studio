@@ -31,7 +31,7 @@ import { CSS_VARS } from "@/lib/types";
 interface Props {
   name: string;
   mode: Mode;
-  /** Display values — these morph during preset/mode transitions. */
+  /** Display values - these morph during preset/mode transitions. */
   values: ThemeValues;
 }
 

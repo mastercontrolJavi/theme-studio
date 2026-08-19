@@ -4,7 +4,9 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { hexToHsl, hslToHex, normalizeHex, parseHsl } from "@/lib/colorUtils";
+import { contrastRatio, formatRatio } from "@/lib/contrast";
 import type { CSSVar } from "@/lib/types";
+import { tokenLabel } from "@/lib/tokenInfo";
 
 // react-colorful is client-only; SSR-disabled to avoid hydration mismatch
 const HexColorPicker = dynamic(
@@ -12,18 +14,64 @@ const HexColorPicker = dynamic(
   { ssr: false }
 );
 
+/** The label Simple mode derives for you, shown so the pairing is never magic. */
+export interface AutoPair {
+  token: CSSVar;
+  hslValue: string;
+}
+
 interface Props {
   varName: CSSVar;
   hslValue: string;
   onChange: (next: string) => void;
+  /** Simple mode names the thing on screen; Advanced names the variable. */
+  plainLabel?: boolean;
+  /** Advanced always shows --var and HSL. Simple hides them behind a toggle. */
+  showRaw?: boolean;
+  autoPair?: AutoPair;
 }
 
-export function ColorInput({ varName, hslValue, onChange }: Props) {
+/**
+ * Simple mode derives the label colour that sits on this swatch. Showing the
+ * swatch and its measured ratio keeps that from being a black box: you can see
+ * what was chosen and whether it reads.
+ */
+function AutoPairReadout({
+  ground,
+  pair,
+}: {
+  ground: string;
+  pair: AutoPair;
+}) {
+  const ratio = contrastRatio(pair.hslValue, ground);
+  const passes = ratio >= 4.5;
+  return (
+    <span className="mt-0.5 flex items-center gap-1 font-mono text-[8.5px] text-ivory-faint">
+      <span
+        className="h-2 w-2 shrink-0 rounded-[2px] border border-ivory-border"
+        style={{ background: hslToHex(pair.hslValue) }}
+      />
+      <span className="truncate">label auto</span>
+      <span className={passes ? "text-ivory-pass" : "text-ivory-fail"}>
+        {formatRatio(ratio)} {passes ? "AA" : "fails AA"}
+      </span>
+    </span>
+  );
+}
+
+export function ColorInput({
+  varName,
+  hslValue,
+  onChange,
+  plainLabel = false,
+  showRaw = true,
+  autoPair,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<string>(hslToHex(hslValue));
 
   // Re-sync local draft when value changes externally (preset switch, URL
-  // load) — render-time state adjustment, per React's derived-state pattern.
+  // load) - render-time state adjustment, per React's derived-state pattern.
   const [prevHsl, setPrevHsl] = useState(hslValue);
   if (prevHsl !== hslValue) {
     setPrevHsl(hslValue);
@@ -51,7 +99,7 @@ export function ColorInput({ varName, hslValue, onChange }: Props) {
         <PopoverTrigger asChild>
           <button
             type="button"
-            aria-label={`Pick color for ${varName}`}
+            aria-label={`Pick color for ${plainLabel ? tokenLabel(varName) : `--${varName}`}`}
             className="h-6 w-6 shrink-0 rounded-md border border-ivory-border hover:border-ivory-border-strong hover:scale-105 transition-[border-color,transform] cursor-pointer shadow-[inset_0_1px_2px_rgba(0,0,0,0.18),inset_0_-1px_1px_rgba(255,255,255,0.25)] ring-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent"
             style={{ background: currentHex }}
           />
@@ -94,14 +142,22 @@ export function ColorInput({ varName, hslValue, onChange }: Props) {
       </Popover>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <span className="font-mono text-[11px] text-ivory-ink truncate">
-          --{varName}
-        </span>
-        {parsed && (
-          <span className="font-mono text-[8.5px] text-ivory-faint">
+        {plainLabel ? (
+          <span className="text-[11.5px] text-ivory-ink truncate">
+            {tokenLabel(varName)}
+          </span>
+        ) : (
+          <span className="font-mono text-[11px] text-ivory-ink truncate">
+            --{varName}
+          </span>
+        )}
+        {showRaw && parsed && (
+          <span className="font-mono text-[8.5px] text-ivory-faint truncate">
+            {plainLabel ? `--${varName} · ` : ""}
             {Math.round(parsed.h)} {Math.round(parsed.s)}% {Math.round(parsed.l)}%
           </span>
         )}
+        {autoPair && <AutoPairReadout ground={hslValue} pair={autoPair} />}
       </div>
 
       <input
@@ -116,6 +172,7 @@ export function ColorInput({ varName, hslValue, onChange }: Props) {
           }
         }}
         spellCheck={false}
+        aria-label={`Hex value for ${plainLabel ? tokenLabel(varName) : `--${varName}`}`}
         className="w-19.5 h-6.5 rounded-[5px] border border-ivory-border bg-ivory-base px-2 font-mono text-[10.5px] text-ivory-muted hover:text-ivory-ink focus:text-ivory-ink focus:outline-none focus:border-ivory-accent focus:bg-white transition-colors"
       />
 
