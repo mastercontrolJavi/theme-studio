@@ -38,6 +38,14 @@
   --color-ivory-accent-tint: #f5e8ee;
   --color-ivory-accent-text: #faf6f0;
 
+  /* Contrast-audit status colours. Both clear 6.6:1 on every ivory ground
+     they sit on, and they are always paired with a glyph so the state never
+     depends on colour alone. */
+  --color-ivory-pass: #35603f;
+  --color-ivory-pass-tint: #e8efe7;
+  --color-ivory-fail: #a32c1e;
+  --color-ivory-fail-tint: #f9e7e2;
+
   --font-display: var(--font-display), "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
   --font-body: var(--font-body), "DM Sans", system-ui, sans-serif;
   --font-mono: var(--font-mono), "JetBrains Mono", ui-monospace, monospace;
