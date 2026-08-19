@@ -399,7 +399,7 @@ export function ThemeStudio() {
         )}
 
         {/* Right preview */}
-        <main className="flex-1 overflow-y-auto thin-scroll">
+        <main className="flex-1 overflow-y-auto overscroll-y-contain thin-scroll">
           <div
             className={[
               "px-6 pt-6 sm:px-8.5 sm:pt-7.5 pb-24 md:pb-15 mx-auto",
