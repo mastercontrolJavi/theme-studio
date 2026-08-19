@@ -101,7 +101,7 @@ export function ControlPanel({
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto overflow-x-hidden thin-scroll px-4.5 pt-4.5 pb-3.5">
         {/* Paint-chip preset gallery */}
-        <section className="mb-5.5">
+        <section className="mb-5.5" data-tour="presets">
           <div className="flex items-center justify-between mb-3">
             <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ivory-muted">
               Preset Gallery
@@ -138,7 +138,7 @@ export function ControlPanel({
 
         {/* Sunken tactile wells: which palette, and how much of it */}
         <section className="mb-5.5 grid grid-cols-2 gap-2.5">
-          <div>
+          <div data-tour="mode">
             <div className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ivory-muted mb-3">
               Mode
             </div>
@@ -219,7 +219,7 @@ export function ControlPanel({
           </div>
         )}
 
-        <div className="flex flex-col">
+        <div className="flex flex-col" data-tour="tokens">
           {groups.map((group) => {
             const isOpen = openGroups[group.id] ?? false;
             return (
@@ -292,7 +292,10 @@ export function ControlPanel({
       </div>
 
       {/* Export button pinned to bottom */}
-      <div className="border-t border-ivory-border p-3.5 bg-ivory-surface shrink-0">
+      <div
+        className="border-t border-ivory-border p-3.5 bg-ivory-surface shrink-0"
+        data-tour="export"
+      >
         <button
           type="button"
           onClick={onExportClick}

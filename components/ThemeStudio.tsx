@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { HelpCircle, Sliders } from "lucide-react";
+import { Compass, HelpCircle, Sliders } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -14,6 +14,7 @@ import { ExportDrawer } from "./ExportDrawer";
 import { HelpModal } from "./HelpModal";
 import { SeedModal } from "./SeedModal";
 import { Logo } from "./Logo";
+import { TourOverlay } from "./TourOverlay";
 import { normalizeHex } from "@/lib/colorUtils";
 import { DEFAULT_PRESET, genFromSeed, getPreset } from "@/lib/themes";
 import { MORPH_MS, easeInOut, lerpThemeValues } from "@/lib/morph";
@@ -30,6 +31,7 @@ import {
 
 const MOBILE_BREAKPOINT = 768;
 const DETAIL_KEY = "theme-studio:detail";
+const TOUR_KEY = "theme-studio:tour-seen";
 
 function readStoredDetail(): DetailLevel | null {
   try {
@@ -39,6 +41,24 @@ function readStoredDetail(): DetailLevel | null {
     // Storage can be unavailable (private mode, blocked cookies). The editor
     // works fine without persistence, so this is not worth surfacing.
     return null;
+  }
+}
+
+function hasSeenTour(): boolean {
+  try {
+    return window.localStorage.getItem(TOUR_KEY) === "1";
+  } catch {
+    // Storage unavailable: treat the tour as seen rather than showing it on
+    // every single visit.
+    return true;
+  }
+}
+
+function markTourSeen() {
+  try {
+    window.localStorage.setItem(TOUR_KEY, "1");
+  } catch {
+    // Nothing to do; the tour simply will not be remembered this session.
   }
 }
 
@@ -144,6 +164,7 @@ export function ThemeStudio() {
   const [exportOpen, setExportOpen] = useState(false);
   const [seedOpen, setSeedOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -241,6 +262,25 @@ export function ThemeStudio() {
     const url = buildUrl(theme, mode, seedHex);
     window.history.replaceState(null, "", url);
   }, [theme, mode, seedHex, hydrated]);
+
+  // Open the tour on a first visit, but only once the control panel has
+  // actually laid out: the mobile check runs in its own effect, and the
+  // spotlight measures real elements.
+  useEffect(() => {
+    if (!hydrated || hasSeenTour()) return;
+    const t = setTimeout(() => setTourOpen(true), 450);
+    return () => clearTimeout(t);
+  }, [hydrated]);
+
+  const closeTour = useCallback(() => {
+    setTourOpen(false);
+    markTourSeen();
+  }, []);
+
+  const startTour = useCallback(() => {
+    setMobileSheetOpen(false);
+    setTourOpen(true);
+  }, []);
 
   // Persist the detail level once hydration has settled, so the initial
   // default never overwrites a stored preference.
@@ -358,7 +398,7 @@ export function ThemeStudio() {
             >
               Theme Studio
             </span>
-            <span className="font-mono text-[8px] tracking-[0.22em] uppercase text-ivory-muted mt-[3px]">
+            <span className="font-mono text-[8px] tracking-[0.22em] uppercase text-ivory-muted mt-[3px] whitespace-nowrap">
               shadcn · theme editor
             </span>
           </div>
@@ -366,12 +406,24 @@ export function ThemeStudio() {
         <div className="flex items-center gap-3.5">
           <button
             type="button"
+            onClick={startTour}
+            aria-label="Take the tour"
+            className="flex items-center gap-1.5 font-mono text-[10.5px] text-ivory-muted hover:text-ivory-accent transition-colors cursor-pointer rounded-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2"
+          >
+            <Compass size={13} />
+            {/* Narrow screens keep the icon only: the header runs out of room
+                once the byline and Guide are in it. */}
+            <span className="hidden sm:inline">Take the tour</span>
+          </button>
+          <span className="hidden sm:block w-px h-3.5 bg-ivory-border" />
+          <button
+            type="button"
             onClick={() => setHelpOpen(true)}
-            className="flex items-center gap-1.5 font-mono text-[10.5px] text-ivory-muted hover:text-ivory-accent transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 font-mono text-[10.5px] text-ivory-muted hover:text-ivory-accent transition-colors cursor-pointer rounded-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2"
             aria-label="Open guide"
           >
             <HelpCircle size={13} />
-            <span>Guide</span>
+            <span className="hidden sm:inline">Guide</span>
           </button>
           <span className="hidden sm:block w-px h-3.5 bg-ivory-border" />
           <span className="hidden sm:block font-mono text-[10px] text-ivory-faint tracking-[0.04em]">
@@ -382,7 +434,7 @@ export function ThemeStudio() {
             href="https://javiertpadilla.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-[10.5px] text-ivory-accent hover:text-ivory-accent-hover transition-colors"
+            className="font-mono text-[10.5px] text-ivory-accent hover:text-ivory-accent-hover transition-colors whitespace-nowrap"
           >
             by Javier Padilla
           </a>
@@ -455,6 +507,9 @@ export function ThemeStudio() {
 
       {/* Help / tutorial guide */}
       <HelpModal open={helpOpen} onOpenChange={setHelpOpen} />
+
+      {/* First-run walkthrough, re-openable from the header */}
+      <TourOverlay open={tourOpen} onClose={closeTour} spotlight={!isMobile} />
     </div>
   );
 }
