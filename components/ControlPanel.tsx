@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, Download } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, ChevronDown, Download, Link2 } from "lucide-react";
 import { ColorInput } from "./ColorInput";
 import { ContrastPanel } from "./ContrastPanel";
 import { PresetSelector } from "./PresetSelector";
@@ -48,6 +48,8 @@ interface Props {
   onReset: () => void;
   onExportClick: () => void;
   onSeedOpen: () => void;
+  /** Resolves false when the clipboard is unavailable. */
+  onCopyLink: () => Promise<boolean>;
 }
 
 export function ControlPanel({
@@ -63,10 +65,20 @@ export function ControlPanel({
   onReset,
   onExportClick,
   onSeedOpen,
+  onCopyLink,
 }: Props) {
   const simple = detail === "simple";
 
   const [showValues, setShowValues] = useState(false);
+  const [linkState, setLinkState] = useState<"idle" | "copied" | "error">(
+    "idle"
+  );
+
+  useEffect(() => {
+    if (linkState === "idle") return;
+    const t = setTimeout(() => setLinkState("idle"), 1800);
+    return () => clearTimeout(t);
+  }, [linkState]);
   const [contrastOpen, setContrastOpen] = useState(() => detail === "advanced");
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
     defaultOpenGroups(detail)
@@ -291,21 +303,55 @@ export function ControlPanel({
         )}
       </div>
 
-      {/* Export button pinned to bottom */}
+      {/* Take-it-away actions, pinned to the bottom */}
       <div
-        className="border-t border-ivory-border p-3.5 bg-ivory-surface shrink-0"
+        className="border-t border-ivory-border p-3.5 bg-ivory-surface shrink-0 flex gap-2"
         data-tour="export"
       >
         <button
           type="button"
           onClick={onExportClick}
-          className="w-full h-10.5 rounded-[9px] bg-ivory-accent text-ivory-accent-text text-[13.5px] font-medium hover:bg-ivory-accent-hover active:translate-y-px transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_4px_14px_-6px_rgba(139,26,74,0.5)]"
+          className="flex-1 h-10.5 rounded-[9px] bg-ivory-accent text-ivory-accent-text text-[13.5px] font-medium hover:bg-ivory-accent-hover active:translate-y-px transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_4px_14px_-6px_rgba(139,26,74,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2"
           style={{ fontFamily: "var(--font-body)" }}
         >
           <Download size={14} />
           Export Theme
         </button>
+        <button
+          type="button"
+          onClick={async () => {
+            setLinkState((await onCopyLink()) ? "copied" : "error");
+          }}
+          aria-label="Copy a link to this theme"
+          title={
+            linkState === "copied"
+              ? "Link copied"
+              : linkState === "error"
+                ? "Could not reach the clipboard"
+                : "Copy a link to this theme"
+          }
+          className={[
+            "h-10.5 w-10.5 shrink-0 rounded-[9px] border transition-colors cursor-pointer flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2",
+            linkState === "copied"
+              ? "border-ivory-pass/40 bg-ivory-pass-tint text-ivory-pass"
+              : linkState === "error"
+                ? "border-ivory-fail/40 bg-ivory-fail-tint text-ivory-fail"
+                : "border-ivory-border bg-ivory-elevated text-ivory-muted hover:text-ivory-accent hover:border-ivory-accent/40",
+          ].join(" ")}
+        >
+          {linkState === "copied" ? <Check size={15} /> : <Link2 size={15} />}
+        </button>
       </div>
+      <p
+        aria-live="polite"
+        className="sr-only"
+      >
+        {linkState === "copied"
+          ? "Link copied to clipboard"
+          : linkState === "error"
+            ? "Could not copy the link"
+            : ""}
+      </p>
     </div>
   );
 }

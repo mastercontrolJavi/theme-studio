@@ -15,8 +15,13 @@ import { HelpModal } from "./HelpModal";
 import { SeedModal } from "./SeedModal";
 import { Logo } from "./Logo";
 import { TourOverlay } from "./TourOverlay";
-import { normalizeHex } from "@/lib/colorUtils";
 import { DEFAULT_PRESET, genFromSeed, getPreset } from "@/lib/themes";
+import {
+  applyOverrides,
+  buildUrl,
+  cloneTheme,
+  parseUrlState,
+} from "@/lib/urlState";
 import { MORPH_MS, easeInOut, lerpThemeValues } from "@/lib/morph";
 import { auditTheme, deriveForeground } from "@/lib/contrast";
 import {
@@ -60,92 +65,6 @@ function markTourSeen() {
   } catch {
     // Nothing to do; the tour simply will not be remembered this session.
   }
-}
-
-function cloneTheme(t: ThemeConfig): ThemeConfig {
-  return {
-    name: t.name,
-    light: { ...t.light },
-    dark: { ...t.dark },
-  };
-}
-
-/**
- * URL state shape:
- *   ?p=Ivory&m=light&l.background=36+33%25+96%25...
- * Custom (seed-generated) themes are encoded by their seed:
- *   ?p=Custom&seed=6d28d9&m=dark
- * Only deltas vs the base theme are written to keep URLs short.
- */
-function parseUrlState(search: string): {
-  base: ThemeConfig;
-  seedHex: string | null;
-  mode: Mode;
-  overrides: { light: Partial<Record<CSSVar, string>>; dark: Partial<Record<CSSVar, string>> };
-} {
-  const sp = new URLSearchParams(search);
-  const mode: Mode = sp.get("m") === "dark" ? "dark" : "light";
-
-  let base: ThemeConfig | undefined;
-  let seedHex: string | null = null;
-  if (sp.get("p") === "Custom") {
-    const seed = normalizeHex(sp.get("seed") ?? "");
-    if (seed) {
-      base = genFromSeed(seed);
-      seedHex = seed;
-    }
-  } else {
-    base = getPreset(sp.get("p") ?? "");
-  }
-  base = base ?? DEFAULT_PRESET;
-
-  const overrides: {
-    light: Partial<Record<CSSVar, string>>;
-    dark: Partial<Record<CSSVar, string>>;
-  } = { light: {}, dark: {} };
-
-  for (const v of CSS_VARS) {
-    const lv = sp.get(`l.${v}`);
-    if (lv) overrides.light[v] = lv;
-    const dv = sp.get(`d.${v}`);
-    if (dv) overrides.dark[v] = dv;
-  }
-
-  return { base, seedHex, mode, overrides };
-}
-
-function buildUrl(theme: ThemeConfig, mode: Mode, seedHex: string | null): string {
-  const sp = new URLSearchParams();
-  sp.set("p", theme.name);
-  sp.set("m", mode);
-  const base =
-    theme.name === "Custom"
-      ? seedHex
-        ? genFromSeed(seedHex)
-        : null
-      : (getPreset(theme.name) ?? null);
-  if (theme.name === "Custom" && seedHex) sp.set("seed", seedHex.replace(/^#/, ""));
-  if (base) {
-    for (const v of CSS_VARS) {
-      if (theme.light[v] !== base.light[v]) sp.set(`l.${v}`, theme.light[v]);
-      if (theme.dark[v] !== base.dark[v]) sp.set(`d.${v}`, theme.dark[v]);
-    }
-  }
-  return `?${sp.toString()}`;
-}
-
-function applyOverrides(
-  base: ThemeConfig,
-  overrides: ReturnType<typeof parseUrlState>["overrides"]
-): ThemeConfig {
-  const next = cloneTheme(base);
-  for (const [k, v] of Object.entries(overrides.light)) {
-    if (v) next.light[k as CSSVar] = v;
-  }
-  for (const [k, v] of Object.entries(overrides.dark)) {
-    if (v) next.dark[k as CSSVar] = v;
-  }
-  return next;
 }
 
 export function ThemeStudio() {
@@ -253,7 +172,15 @@ export function ThemeStudio() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Sync state → URL (skip first run after hydration to avoid loop)
+  /**
+   * Sync state to the URL, debounced.
+   *
+   * A single drag across the colour picker fires ~80 state updates, and one
+   * replaceState per update runs straight into the browser's rate limit
+   * (Safari throws a SecurityError past ~100 calls in 30 seconds). Each change
+   * cancels the pending write and schedules a new one, so the address bar
+   * lands on the final value and nothing in between reaches the history API.
+   */
   useEffect(() => {
     if (!hydrated) return;
     if (skipNextUrlSync.current) {
@@ -261,8 +188,27 @@ export function ThemeStudio() {
       return;
     }
     const url = buildUrl(theme, mode, seedHex);
-    window.history.replaceState(null, "", url);
+    const t = setTimeout(() => window.history.replaceState(null, "", url), 250);
+    return () => clearTimeout(t);
   }, [theme, mode, seedHex, hydrated]);
+
+  /**
+   * Built from state rather than read off window.location, so a link copied
+   * immediately after an edit carries that edit instead of whatever the
+   * debounced write last committed.
+   */
+  const handleCopyLink = useCallback(async () => {
+    const url =
+      window.location.origin +
+      window.location.pathname +
+      buildUrl(theme, mode, seedHex);
+    try {
+      await navigator.clipboard.writeText(url);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [theme, mode, seedHex]);
 
   // Open the tour on a first visit, but only once the control panel has
   // actually laid out: the mobile check runs in its own effect, and the
@@ -380,6 +326,7 @@ export function ThemeStudio() {
         setSeedOpen(true);
         setMobileSheetOpen(false);
       }}
+      onCopyLink={handleCopyLink}
     />
   );
 
