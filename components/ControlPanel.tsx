@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, Download } from "lucide-react";
 import { ColorInput } from "./ColorInput";
+import { ContrastPanel } from "./ContrastPanel";
 import { PresetSelector } from "./PresetSelector";
 import { VAR_GROUPS, type CSSVar, type Mode, type ThemeConfig } from "@/lib/types";
 
@@ -31,6 +32,9 @@ export function ControlPanel({
   onExportClick,
   onSeedOpen,
 }: Props) {
+  // Collapsed by default: the score is the headline, the breakdown is on
+  // demand. Step 3's Simple/Advanced toggle will drive this default.
+  const [contrastOpen, setContrastOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     base: true,
     primary: true,
@@ -71,6 +75,18 @@ export function ControlPanel({
             onSeedOpen={onSeedOpen}
           />
         </section>
+
+        {/* Live WCAG audit of the mode being edited */}
+        <ContrastPanel
+          values={values}
+          otherMode={{
+            label: mode === "light" ? "dark" : "light",
+            values: theme[mode === "light" ? "dark" : "light"],
+          }}
+          onVarChange={onVarChange}
+          open={contrastOpen}
+          onOpenChange={setContrastOpen}
+        />
 
         {/* Sunken tactile mode well */}
         <section className="mb-5.5">

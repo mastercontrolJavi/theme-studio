@@ -71,15 +71,16 @@ export function hexToHsl(hex: string): string | null {
   return formatHsl(h, s * 100, l * 100);
 }
 
-export function hslToHex(hsl: string): string {
+/** "336 68% 32%" -> [r, g, b] with each channel in 0-255. */
+export function hslToRgb(hsl: string): [number, number, number] | null {
   const parsed = parseHsl(hsl);
-  if (!parsed) return "#000000";
+  if (!parsed) return null;
   const { h, s, l } = parsed;
-  const sNorm = s / 100;
-  const lNorm = l / 100;
+  const sNorm = Math.min(Math.max(s, 0), 100) / 100;
+  const lNorm = Math.min(Math.max(l, 0), 100) / 100;
 
   const c = (1 - Math.abs(2 * lNorm - 1)) * sNorm;
-  const hPrime = ((h % 360) + 360) % 360 / 60;
+  const hPrime = ((((h % 360) + 360) % 360) / 60);
   const x = c * (1 - Math.abs((hPrime % 2) - 1));
   const m = lNorm - c / 2;
 
@@ -92,14 +93,17 @@ export function hslToHex(hsl: string): string {
   else if (hPrime < 3) [r1, g1, b1] = [0, c, x];
   else if (hPrime < 4) [r1, g1, b1] = [0, x, c];
   else if (hPrime < 5) [r1, g1, b1] = [x, 0, c];
-  else if (hPrime < 6) [r1, g1, b1] = [c, 0, x];
+  else [r1, g1, b1] = [c, 0, x];
 
+  return [(r1 + m) * 255, (g1 + m) * 255, (b1 + m) * 255];
+}
+
+export function hslToHex(hsl: string): string {
+  const rgb = hslToRgb(hsl);
+  if (!rgb) return "#000000";
   const toHex = (n: number) =>
-    Math.round((n + m) * 255)
-      .toString(16)
-      .padStart(2, "0");
-
-  return `#${toHex(r1)}${toHex(g1)}${toHex(b1)}`;
+    Math.round(n).toString(16).padStart(2, "0");
+  return `#${toHex(rgb[0])}${toHex(rgb[1])}${toHex(rgb[2])}`;
 }
 
 /** True if a color (hsl string) is dark enough that white text reads on it */
