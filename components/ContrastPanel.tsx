@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronDown, Wand2, X } from "lucide-react";
+import { Check, ChevronDown, X } from "lucide-react";
 import { Collapse } from "./Collapse";
+import { FixContrastButton } from "./FixContrastButton";
 import {
   auditTheme,
   findContrastFix,
@@ -41,6 +42,7 @@ function LevelChip({
       ].join(" ")}
     >
       {passed ? <Check size={9} strokeWidth={3} /> : <X size={9} strokeWidth={3} />}
+      <span className="sr-only">{passed ? "passes " : "fails "}</span>
       {level}
     </span>
   );
@@ -145,27 +147,14 @@ function PairingRow({
           for an unparseable value, where there is nothing honest to offer. */}
       {!aa && !informational && fix && (
         <div className="mt-2 ml-[13px]">
-          <button
-            type="button"
-            onClick={() => {
-              onVarChange(fix.token, fix.hsl);
+          <FixContrastButton
+            fix={fix}
+            required={required}
+            onApply={(f) => {
+              onVarChange(f.token, f.hsl);
               onFixed(pairing.id);
             }}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-ivory-accent/30 bg-ivory-accent-tint px-2 py-1 font-mono text-[9.5px] text-ivory-accent transition-colors hover:bg-ivory-accent hover:text-ivory-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-1"
-            title={`Sets --${fix.token} to ${fix.hsl}, reaching ${required}:1`}
-          >
-            <Wand2 size={10} />
-            Fix contrast
-            <span className="opacity-70">
-              L {Math.round(fix.fromL)}% to {Math.round(fix.toL)}%
-            </span>
-          </button>
-          {fix.breaks.length > 0 && (
-            <p className="mt-1 font-mono text-[9px] leading-relaxed text-ivory-fail">
-              Heads up: this drops {fix.breaks.map((b) => b.label).join(", ")}{" "}
-              below AA. No single lightness satisfies both.
-            </p>
-          )}
+          />
         </div>
       )}
     </div>

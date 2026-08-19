@@ -256,6 +256,8 @@ export function ControlPanel({
                           varName={v}
                           hslValue={values[v]}
                           onChange={(next) => onVarChange(v, next)}
+                          values={values}
+                          onVarChange={onVarChange}
                           plainLabel={simple}
                           showRaw={!simple || showValues}
                           autoPair={
