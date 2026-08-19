@@ -180,10 +180,14 @@ export function PreviewPanel({ name, mode, values, headerNote }: Props) {
           <Label htmlFor="preview-textarea" className="text-xs">
             Message
           </Label>
+          {/* resize-none: the native browser resize grip is unthemed chrome
+              that can't take the theme's colours, and it doesn't belong on a
+              read-only preview anyway. */}
           <Textarea
             id="preview-textarea"
             placeholder="Type a longer message..."
             rows={3}
+            className="resize-none"
           />
         </div>
       </Section>
