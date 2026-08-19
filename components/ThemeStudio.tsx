@@ -18,7 +18,7 @@ import { TourOverlay } from "./TourOverlay";
 import { normalizeHex } from "@/lib/colorUtils";
 import { DEFAULT_PRESET, genFromSeed, getPreset } from "@/lib/themes";
 import { MORPH_MS, easeInOut, lerpThemeValues } from "@/lib/morph";
-import { deriveForeground } from "@/lib/contrast";
+import { auditTheme, deriveForeground } from "@/lib/contrast";
 import {
   CSS_VARS,
   SIMPLE_AUTO_PAIRS,
@@ -165,6 +165,7 @@ export function ThemeStudio() {
   const [seedOpen, setSeedOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
+  const [compare, setCompare] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -452,8 +453,79 @@ export function ThemeStudio() {
 
         {/* Right preview */}
         <main className="flex-1 overflow-y-auto thin-scroll">
-          <div className="px-6 pt-6 sm:px-8.5 sm:pt-7.5 pb-24 md:pb-15 max-w-[1040px] mx-auto">
-            <PreviewPanel name={theme.name} mode={mode} values={display} />
+          <div
+            className={[
+              "px-6 pt-6 sm:px-8.5 sm:pt-7.5 pb-24 md:pb-15 mx-auto",
+              compare ? "max-w-[1480px]" : "max-w-[1040px]",
+            ].join(" ")}
+          >
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ivory-muted">
+                {compare ? "Light and dark, side by side" : "Live preview"}
+              </span>
+              <div className="flex shrink-0 rounded-[9px] bg-ivory-elevated p-1 shadow-[inset_0_2px_5px_rgba(26,10,20,0.12)]">
+                {(
+                  [
+                    ["single", "Single"],
+                    ["compare", "Compare"],
+                  ] as const
+                ).map(([id, label]) => {
+                  const active = (id === "compare") === compare;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setCompare(id === "compare")}
+                      className={[
+                        "cursor-pointer rounded-[7px] px-3 py-1.5 font-mono text-[10.5px] transition-all duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent",
+                        active
+                          ? "bg-ivory-base text-ivory-ink shadow-[0_1px_3px_rgba(26,10,20,0.16)]"
+                          : "bg-transparent text-ivory-faint hover:text-ivory-muted",
+                      ].join(" ")}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {compare ? (
+              /*
+               * Comparison reads the theme directly rather than the morphing
+               * display values. Mid-tween frames are interpolations that are
+               * not in the theme, and a view whose whole job is judging the
+               * two real palettes should never show a colour that is not one
+               * of them.
+               */
+              <div className="grid gap-5 lg:grid-cols-2 items-start">
+                {(["light", "dark"] as const).map((m) => {
+                  const report = auditTheme(theme[m]);
+                  const allPass = report.passAA === report.total;
+                  return (
+                    <PreviewPanel
+                      key={m}
+                      name={theme.name}
+                      mode={m}
+                      values={theme[m]}
+                      headerNote={
+                        <span
+                          className={[
+                            "font-mono text-[10px] uppercase tracking-[0.14em]",
+                            allPass ? "text-primary" : "text-destructive",
+                          ].join(" ")}
+                        >
+                          {report.passAA}/{report.total} pass AA
+                        </span>
+                      }
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <PreviewPanel name={theme.name} mode={mode} values={display} />
+            )}
           </div>
         </main>
       </div>
