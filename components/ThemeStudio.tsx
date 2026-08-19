@@ -382,7 +382,7 @@ export function ThemeStudio() {
             href="https://javiertpadilla.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-[10.5px] text-ivory-accent hover:text-ivory-accent-hover transition-colors whitespace-nowrap"
+            className="font-mono text-[10.5px] text-ivory-accent hover:text-ivory-accent-hover transition-colors text-right leading-tight"
           >
             by Javier Padilla
           </a>
@@ -497,7 +497,16 @@ export function ThemeStudio() {
         <SheetContent
           side="bottom"
           showCloseButton
-          className="h-[85vh] bg-ivory-surface border-t border-ivory-border text-ivory-ink p-0 flex flex-col"
+          className="bg-ivory-surface border-t border-ivory-border text-ivory-ink p-0 flex flex-col"
+          /*
+           * Height set inline rather than as a class. The sheet's own base
+           * styles carry `data-[side=bottom]:h-auto`, and tailwind-merge does
+           * not treat a variant-prefixed utility as conflicting with a plain
+           * one, so `h-[85vh]` lost and the sheet grew to fit its content.
+           * With the body scroll-locked by the dialog, everything above the
+           * fold, the preset gallery included, became unreachable.
+           */
+          style={{ height: "85vh" }}
         >
           <div className="px-5 pt-5 pb-3 border-b border-ivory-border">
             <SheetTitle

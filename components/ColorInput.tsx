@@ -6,9 +6,17 @@ import { Info } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapse } from "./Collapse";
 import { TokenDetails } from "./TokenDetails";
-import { hexToHsl, hslToHex, normalizeHex, parseHsl } from "@/lib/colorUtils";
+import {
+  hexToHsl,
+  hslToHex,
+  hslToOklch,
+  normalizeHex,
+  oklchToHsl,
+  parseHsl,
+  parseHslLoose,
+} from "@/lib/colorUtils";
 import { contrastRatio, formatRatio } from "@/lib/contrast";
-import type { CSSVar, ThemeValues } from "@/lib/types";
+import type { ColorFormat, CSSVar, ThemeValues } from "@/lib/types";
 import { tokenLabel } from "@/lib/tokenInfo";
 
 // react-colorful is client-only; SSR-disabled to avoid hydration mismatch
@@ -35,7 +43,32 @@ interface Props {
   /** Full palette for the mode being edited, so the info panel can score it. */
   values: ThemeValues;
   onVarChange: (key: CSSVar, hsl: string) => void;
+  /** Notation the text input reads and writes. */
+  format?: ColorFormat;
 }
+
+/** The stored HSL rendered in the notation the input is showing. */
+function toDisplay(hsl: string, format: ColorFormat): string {
+  if (format === "hex") return hslToHex(hsl);
+  if (format === "oklch") return hslToOklch(hsl);
+  return hsl;
+}
+
+/** Parse a typed value back to the stored form, or null when it is not valid. */
+function fromDisplay(raw: string, format: ColorFormat): string | null {
+  if (format === "hex") {
+    const normalized = normalizeHex(raw);
+    return normalized ? hexToHsl(normalized) : null;
+  }
+  if (format === "oklch") return oklchToHsl(raw);
+  return parseHslLoose(raw);
+}
+
+const FORMAT_HINT: Record<ColorFormat, string> = {
+  hex: "Expected a hex colour, like #8b1a4a or #8b1.",
+  hsl: "Expected hue, saturation, lightness, like 336 68% 32%.",
+  oklch: "Expected oklch(L C H), like oklch(0.41 0.145 5.4).",
+};
 
 /**
  * Simple mode derives the label colour that sits on this swatch. Showing the
@@ -76,36 +109,103 @@ export function ColorInput({
   autoPair,
   values,
   onVarChange,
+  format = "hex",
 }: Props) {
   const [open, setOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const infoId = useId();
-  const [draft, setDraft] = useState<string>(hslToHex(hslValue));
+  const errorId = useId();
+  const [draft, setDraft] = useState<string>(() => toDisplay(hslValue, format));
+  const [invalid, setInvalid] = useState(false);
 
-  // Re-sync local draft when value changes externally (preset switch, URL
-  // load) - render-time state adjustment, per React's derived-state pattern.
-  const [prevHsl, setPrevHsl] = useState(hslValue);
-  if (prevHsl !== hslValue) {
-    setPrevHsl(hslValue);
-    setDraft(hslToHex(hslValue));
+  // Re-sync the draft when the value or the notation changes from outside
+  // (preset switch, URL load, format toggle). Render-time state adjustment,
+  // per React's derived-state pattern.
+  const [prevSync, setPrevSync] = useState(`${hslValue}|${format}`);
+  if (prevSync !== `${hslValue}|${format}`) {
+    setPrevSync(`${hslValue}|${format}`);
+    setDraft(toDisplay(hslValue, format));
+    setInvalid(false);
   }
 
-  function commitHex(raw: string) {
-    const normalized = normalizeHex(raw);
-    if (!normalized) {
-      // Invalid input - reset to current
-      setDraft(hslToHex(hslValue));
+  /**
+   * Commit a typed value.
+   *
+   * An unparseable entry leaves the text alone and says what was expected.
+   * Silently reverting, which is what this used to do, throws away the typing
+   * and never explains why.
+   *
+   * A value that renders back to the same display string is treated as a
+   * no-op. OKLCH is shown rounded, so re-committing what is already on screen
+   * would otherwise nudge the colour by a hex level without the user changing
+   * anything.
+   */
+  function commitValue(raw: string) {
+    if (raw.trim() === "") {
+      setDraft(toDisplay(hslValue, format));
+      setInvalid(false);
       return;
     }
-    const nextHsl = hexToHsl(normalized);
-    if (nextHsl) onChange(nextHsl);
-    setDraft(normalized);
+    const next = fromDisplay(raw, format);
+    if (!next) {
+      setInvalid(true);
+      return;
+    }
+    setInvalid(false);
+    if (toDisplay(next, format) !== toDisplay(hslValue, format)) {
+      onChange(next);
+    }
+    setDraft(toDisplay(next, format));
+  }
+
+  /** Escape abandons the edit and puts the current value back. */
+  function cancelEdit() {
+    setDraft(toDisplay(hslValue, format));
+    setInvalid(false);
   }
 
   const currentHex = hslToHex(hslValue);
   const parsed = parseHsl(hslValue);
 
   const label = plainLabel ? tokenLabel(varName) : `--${varName}`;
+
+  /*
+   * Hex is short enough to sit in the row. HSL and OKLCH are not: at the
+   * 322px panel width they squeezed "--background" down to "--backgr..." and
+   * still clipped their own value. Those get a full-width line of their own.
+   */
+  const inline = format === "hex";
+
+  const valueInput = (
+    <input
+      type="text"
+      value={draft}
+      onChange={(e) => {
+        setDraft(e.target.value);
+        if (invalid) setInvalid(false);
+      }}
+      onBlur={(e) => commitValue(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          commitValue(e.currentTarget.value);
+        } else if (e.key === "Escape") {
+          cancelEdit();
+        }
+      }}
+      spellCheck={false}
+      autoComplete="off"
+      aria-label={`${format} value for ${label}`}
+      aria-invalid={invalid || undefined}
+      aria-describedby={invalid ? errorId : undefined}
+      className={[
+        "h-6.5 rounded-[5px] border bg-ivory-base px-2 font-mono text-[10.5px] text-ivory-muted hover:text-ivory-ink focus:text-ivory-ink focus:outline-none focus:bg-white transition-colors",
+        inline ? "w-19.5 shrink-0" : "w-full",
+        invalid
+          ? "border-ivory-fail bg-ivory-fail-tint text-ivory-fail focus:border-ivory-fail"
+          : "border-ivory-border focus:border-ivory-accent",
+      ].join(" ")}
+    />
+  );
 
   return (
     <div>
@@ -131,28 +231,45 @@ export function ColorInput({
                 onChange={(next) => {
                   const hsl = hexToHsl(next);
                   if (hsl) onChange(hsl);
-                  setDraft(next);
+                  setDraft(toDisplay(hsl ?? hslValue, format));
+                  setInvalid(false);
                 }}
               />
             </div>
             <div className="mt-2 flex items-center gap-2">
               <span className="font-mono text-[10px] uppercase tracking-wider text-ivory-muted">
-                hex
+                {format}
               </span>
               <input
                 type="text"
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onBlur={(e) => commitHex(e.target.value)}
+                aria-label={`${format} value for ${label}`}
+                onChange={(e) => {
+                  setDraft(e.target.value);
+                  if (invalid) setInvalid(false);
+                }}
+                onBlur={(e) => commitValue(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    commitHex(e.currentTarget.value);
-                    setOpen(false);
+                    commitValue(e.currentTarget.value);
+                    if (fromDisplay(e.currentTarget.value, format)) setOpen(false);
+                  } else if (e.key === "Escape") {
+                    cancelEdit();
                   }
                 }}
-                className="flex-1 h-7 rounded border border-ivory-border bg-ivory-base px-2 font-mono text-[11px] text-ivory-ink focus:outline-none focus:border-ivory-accent"
+                className={[
+                  "flex-1 h-7 rounded border bg-ivory-base px-2 font-mono text-[11px] text-ivory-ink focus:outline-none",
+                  invalid
+                    ? "border-ivory-fail focus:border-ivory-fail"
+                    : "border-ivory-border focus:border-ivory-accent",
+                ].join(" ")}
               />
             </div>
+            {invalid && (
+              <p className="mt-1.5 font-mono text-[9.5px] leading-relaxed text-ivory-fail">
+                {FORMAT_HINT[format]}
+              </p>
+            )}
           </PopoverContent>
         </Popover>
 
@@ -175,21 +292,7 @@ export function ColorInput({
           {autoPair && <AutoPairReadout ground={hslValue} pair={autoPair} />}
         </div>
 
-        <input
-          type="text"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={(e) => commitHex(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              commitHex(e.currentTarget.value);
-              (e.target as HTMLInputElement).blur();
-            }
-          }}
-          spellCheck={false}
-          aria-label={`Hex value for ${label}`}
-          className="w-19.5 h-6.5 rounded-[5px] border border-ivory-border bg-ivory-base px-2 font-mono text-[10.5px] text-ivory-muted hover:text-ivory-ink focus:text-ivory-ink focus:outline-none focus:border-ivory-accent focus:bg-white transition-colors"
-        />
+        {inline && valueInput}
 
         <button
           type="button"
@@ -228,6 +331,18 @@ export function ColorInput({
           }
         `}</style>
       </div>
+
+      {!inline && <div className="mb-1.5 ml-8.5">{valueInput}</div>}
+
+      {invalid && (
+        <p
+          id={errorId}
+          role="alert"
+          className="mb-1.5 ml-8.5 font-mono text-[9.5px] leading-relaxed text-ivory-fail"
+        >
+          {FORMAT_HINT[format]} Press Escape to put the old value back.
+        </p>
+      )}
 
       <Collapse open={infoOpen}>
         <div id={infoId}>

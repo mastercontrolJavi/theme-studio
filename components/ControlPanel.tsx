@@ -12,6 +12,7 @@ import {
   SIMPLE_GROUP_VARS,
   CSS_VARS,
   VAR_GROUPS,
+  type ColorFormat,
   type CSSVar,
   type DetailLevel,
   type Mode,
@@ -73,6 +74,8 @@ export function ControlPanel({
   const [linkState, setLinkState] = useState<"idle" | "copied" | "error">(
     "idle"
   );
+  // Simple mode stays on hex: choosing a notation is an Advanced concern.
+  const [format, setFormat] = useState<ColorFormat>("hex");
 
   useEffect(() => {
     if (linkState === "idle") return;
@@ -215,11 +218,11 @@ export function ControlPanel({
         </section>
 
         {/* Colour rows. Simple mode shows fewer groups and fewer rows in each. */}
-        {simple && (
-          <div className="flex items-center justify-between mb-1">
-            <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ivory-muted">
-              Colors
-            </span>
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ivory-muted">
+            Colors
+          </span>
+          {simple ? (
             <button
               type="button"
               onClick={() => setShowValues((v) => !v)}
@@ -228,8 +231,34 @@ export function ControlPanel({
             >
               {showValues ? "hide css values" : "show css values"}
             </button>
-          </div>
-        )}
+          ) : (
+            <div
+              role="group"
+              aria-label="Value notation"
+              className="flex rounded-[7px] bg-ivory-elevated p-0.5 shadow-[inset_0_1px_3px_rgba(26,10,20,0.1)]"
+            >
+              {(["hex", "hsl", "oklch"] as const).map((f) => {
+                const active = format === f;
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setFormat(f)}
+                    className={[
+                      "rounded-[5px] px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em] cursor-pointer transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent",
+                      active
+                        ? "bg-ivory-base text-ivory-ink shadow-[0_1px_2px_rgba(26,10,20,0.14)]"
+                        : "text-ivory-faint hover:text-ivory-muted",
+                    ].join(" ")}
+                  >
+                    {f}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         <div className="flex flex-col" data-tour="tokens">
           {groups.map((group) => {
@@ -272,6 +301,7 @@ export function ControlPanel({
                           onVarChange={onVarChange}
                           plainLabel={simple}
                           showRaw={!simple || showValues}
+                          format={simple ? "hex" : format}
                           autoPair={
                             paired
                               ? { token: paired, hslValue: values[paired] }

@@ -300,6 +300,8 @@ export function PreviewPanel({ name, mode, values, headerNote }: Props) {
           real fill, --border doing structural work, and --accent visible
           without needing a hover or an open menu. */}
       <Section label="data table" hint="border · muted · accent">
+        {/* The table keeps its natural column widths and scrolls inside this
+            wrapper rather than stretching the panel on a narrow screen. */}
         <div className="w-full overflow-x-auto rounded-xl ring-1 ring-border bg-card">
           <table className="w-full border-collapse text-left text-[13px]">
             <caption className="sr-only">Recent deploys</caption>
