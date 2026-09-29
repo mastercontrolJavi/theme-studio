@@ -22,8 +22,8 @@ export function FixContrastButton({
       <button
         type="button"
         onClick={() => onApply(fix)}
-        title={`Sets --${fix.token} to ${fix.hsl}, reaching ${required}:1`}
-        className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-ivory-accent/30 bg-ivory-accent-tint px-2 py-1 font-mono text-[9.5px] text-ivory-accent transition-colors hover:bg-ivory-accent hover:text-ivory-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-1"
+        title={`Sets --${fix.token} to ${fix.value}, reaching ${required}:1`}
+        className="inline-flex cursor-pointer items-center gap-2 rounded-[5px] border border-ivory-accent/30 bg-ivory-accent-tint px-2 py-1 font-mono text-[9.5px] text-ivory-accent transition-colors hover:bg-ivory-accent hover:text-ivory-accent-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-1"
       >
         <Wand2 size={10} />
         Fix contrast

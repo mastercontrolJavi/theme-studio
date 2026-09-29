@@ -82,7 +82,7 @@ export function PresetSelector({
                   : "border border-ivory-border shadow-[0_1px_2px_rgba(26,10,20,0.05)] hover:border-ivory-border-strong hover:-translate-y-px hover:shadow-[0_4px_12px_-6px_rgba(26,10,20,0.2)]",
               ].join(" ")}
             >
-              <div className="flex h-[42px]" aria-hidden>
+              <div className="flex h-8 sm:h-10" aria-hidden>
                 {bands.map((c, i) => (
                   <span
                     key={i}
@@ -91,7 +91,7 @@ export function PresetSelector({
                   />
                 ))}
               </div>
-              <div className="flex items-center justify-between px-2 py-1.5 border-t border-ivory-border bg-ivory-base">
+              <div className="flex items-center justify-between border-t border-ivory-border bg-ivory-base px-2 py-1 sm:py-2">
                 <span
                   className={[
                     "font-mono text-[10.5px] truncate",
@@ -115,7 +115,7 @@ export function PresetSelector({
       <button
         type="button"
         onClick={onSeedOpen}
-        className="flex flex-col items-center justify-center gap-1 min-h-[71px] rounded-[10px] border border-dashed border-ivory-border-strong bg-transparent text-ivory-muted cursor-pointer transition-colors hover:bg-ivory-accent-tint hover:border-ivory-accent hover:text-ivory-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2"
+        className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-[10px] border border-dashed border-ivory-border-strong bg-transparent text-ivory-muted cursor-pointer transition-colors hover:bg-ivory-accent-tint hover:border-ivory-accent hover:text-ivory-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2 sm:min-h-[72px]"
       >
         <span className="text-[17px] leading-none" aria-hidden>
           +

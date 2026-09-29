@@ -48,7 +48,7 @@ function Section({ number, icon: Icon, title, children }: SectionProps) {
           {title}
         </h3>
       </div>
-      <div className="ml-9 flex flex-col gap-2.5">{children}</div>
+      <div className="ml-9 flex flex-col gap-3">{children}</div>
     </div>
   );
 }
@@ -61,8 +61,8 @@ function P({ children }: { children: React.ReactNode }) {
 
 function Tip({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex gap-2.5 rounded-md bg-[#8b1a4a]/8 border border-[#8b1a4a]/20 px-3 py-2.5">
-      <span className="font-mono text-[10px] text-[#8b1a4a] uppercase tracking-[0.1em] shrink-0 mt-0.5">
+    <div className="flex gap-3 rounded-md bg-[#8b1a4a]/8 border border-[#8b1a4a]/20 px-3 py-3">
+      <span className="font-mono text-[10px] text-[#8b1a4a] uppercase tracking-[0.1em] shrink-0 mt-1">
         tip
       </span>
       <p className="text-[12px] leading-relaxed text-[#5a2a3a]">{children}</p>
@@ -73,7 +73,7 @@ function Tip({ children }: { children: React.ReactNode }) {
 function Mono({ children }: { children: React.ReactNode }) {
   return (
     <code
-      className="font-mono text-[11px] bg-[#1a0a14]/8 text-[#1a0a14] rounded px-1 py-0.5"
+      className="font-mono text-[11px] bg-[#1a0a14]/8 text-[#1a0a14] rounded px-1 py-1"
       style={{ fontFamily: "var(--font-mono)" }}
     >
       {children}
@@ -83,9 +83,9 @@ function Mono({ children }: { children: React.ReactNode }) {
 
 function GroupRow({ label, description }: { label: string; description: string }) {
   return (
-    <div className="flex items-start gap-3 py-1.5 border-b border-[#d4c8bc] last:border-0">
+    <div className="flex items-start gap-3 py-2 border-b border-[#d4c8bc] last:border-0">
       <span
-        className="shrink-0 font-mono text-[10px] uppercase tracking-[0.1em] text-[#8b1a4a] w-24 pt-0.5"
+        className="shrink-0 font-mono text-[10px] uppercase tracking-[0.1em] text-[#8b1a4a] w-24 pt-1"
       >
         {label}
       </span>
@@ -109,7 +109,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
             <button
               type="button"
               aria-label="Close"
-              className="absolute top-4 right-4 text-[#1a0a14] hover:opacity-60 transition-opacity text-base leading-none cursor-pointer z-10"
+              className="absolute right-2 top-2 z-10 flex h-10 w-10 cursor-pointer items-center justify-center rounded-md text-base leading-none text-[#1a0a14] transition-opacity hover:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent"
             >
               ✕
             </button>
@@ -135,7 +135,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
               <strong className="font-medium text-[#1a0a14]">shadcn/ui</strong>{" "}
               projects. shadcn/ui components are styled entirely through CSS
               custom properties (variables), so swapping a handful of
-              HSL values changes the look of your entire UI - buttons, cards,
+              OKLCH values changes the look of your entire UI - buttons, cards,
               inputs, alerts, and more - all at once.
             </P>
             <P>
@@ -153,7 +153,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
             <P>
               Five hand-crafted palettes are available from the{" "}
               <strong className="font-medium text-[#1a0a14]">Preset</strong>{" "}
-              dropdown at the top of the control panel. Each one ships
+              gallery at the top of the control panel. Each one ships
               with a complete set of light and dark color values:
             </P>
             <div className="flex flex-col gap-0 rounded-md border border-[#d4c8bc] overflow-hidden">
@@ -168,7 +168,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
                   key={name}
                   className="flex items-start gap-3 px-3 py-2 border-b border-[#d4c8bc] last:border-0 bg-[#ede7de]/50"
                 >
-                  <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.1em] text-[#8b1a4a] w-16 pt-0.5">
+                  <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.1em] text-[#8b1a4a] w-16 pt-1">
                     {name}
                   </span>
                   <span className="text-[12px] text-[#3d2b35] leading-relaxed">{desc}</span>
@@ -221,9 +221,9 @@ export function HelpModal({ open, onOpenChange }: Props) {
             </P>
             <div className="flex flex-col gap-2">
               <div className="flex gap-3 items-start">
-                <span className="shrink-0 w-5 h-5 rounded bg-[#8b1a4a] mt-0.5" />
+                <span className="shrink-0 w-5 h-5 rounded bg-[#8b1a4a] mt-1" />
                 <div>
-                  <p className="text-[12px] font-medium text-[#1a0a14] mb-0.5">Color swatch</p>
+                  <p className="text-[12px] font-medium text-[#1a0a14] mb-1">Color swatch</p>
                   <p className="text-[12px] text-[#3d2b35] leading-relaxed">
                     Click the colored square to open a pop-up color
                     picker with a saturation/brightness canvas, a hue
@@ -233,11 +233,11 @@ export function HelpModal({ open, onOpenChange }: Props) {
                 </div>
               </div>
               <div className="flex gap-3 items-start">
-                <span className="shrink-0 w-5 h-5 rounded bg-[#ede7de] border border-[#d4c8bc] mt-0.5 flex items-center justify-center">
+                <span className="shrink-0 w-5 h-5 rounded bg-[#ede7de] border border-[#d4c8bc] mt-1 flex items-center justify-center">
                   <span className="font-mono text-[7px] text-[#8a7a72]">#</span>
                 </span>
                 <div>
-                  <p className="text-[12px] font-medium text-[#1a0a14] mb-0.5">Hex input</p>
+                  <p className="text-[12px] font-medium text-[#1a0a14] mb-1">Hex input</p>
                   <p className="text-[12px] text-[#3d2b35] leading-relaxed">
                     Type a 6-digit hex code directly into the input
                     field next to the swatch. Paste values from Figma,
@@ -304,7 +304,7 @@ export function HelpModal({ open, onOpenChange }: Props) {
               shadcn/ui components rendered using your current theme
               values. It includes:
             </P>
-            <ul className="text-[12px] text-[#3d2b35] leading-relaxed space-y-1.5 list-none">
+            <ul className="text-[12px] text-[#3d2b35] leading-relaxed space-y-2 list-none">
               {[
                 "Buttons in all five variants (Default, Secondary, Outline, Ghost, Destructive)",
                 "Text inputs and a textarea",
@@ -313,10 +313,10 @@ export function HelpModal({ open, onOpenChange }: Props) {
                 "Default and Destructive alert banners",
                 "Switch toggles, Tabs, and Select dropdowns",
                 "Skeleton loading placeholders",
-                "A full color palette grid showing all 12 theme values at a glance",
+                "A full color palette grid showing all 19 theme values at a glance",
               ].map((item) => (
                 <li key={item} className="flex gap-2">
-                  <span className="shrink-0 text-[#8b1a4a] mt-0.5">›</span>
+                  <span className="shrink-0 text-[#8b1a4a] mt-1">›</span>
                   {item}
                 </li>
               ))}
@@ -333,14 +333,14 @@ export function HelpModal({ open, onOpenChange }: Props) {
           {/* 7. Reset */}
           <Section number={7} icon={RotateCcw} title="Resetting to Defaults">
             <P>
-              Clicked &ldquo;reset&rdquo; next to the Preset label to discard all
+              Click &ldquo;reset&rdquo; next to the Preset Gallery label to discard all
               your color overrides and return to the preset&apos;s original
               values for the active mode. Both light and dark overrides
               are cleared at once.
             </P>
             <P>
               You can also switch to a different preset using the
-              dropdown - this implicitly resets the theme to that
+              gallery - this implicitly resets the theme to that
               preset&apos;s defaults, giving you a clean slate to
               customize from.
             </P>
@@ -356,8 +356,8 @@ export function HelpModal({ open, onOpenChange }: Props) {
               address bar updates - no save button required.
             </P>
             <P>
-              To share your customization, copy the URL from your
-              browser and send it. The recipient will see your exact
+              To share your customization, use the link button beside Export Theme.
+              The recipient will see your exact
               preset, mode, and all color overrides the moment they
               open it.
             </P>
@@ -382,16 +382,16 @@ export function HelpModal({ open, onOpenChange }: Props) {
               <Mono>:root</Mono> (light) and{" "}
               <Mono>.dark</Mono> variable definitions.
             </P>
-            <div className="flex flex-col gap-1.5 text-[12px] text-[#3d2b35]">
+            <div className="flex flex-col gap-2 text-[12px] text-[#3d2b35]">
               <p className="font-medium text-[#1a0a14] text-[12px]">To use it in your project:</p>
               {[
-                ["1", 'Click “Copy to clipboard” or “Download globals.css”.'],
+                ["1", 'Click “Copy to clipboard” or “Download theme.css”.'],
                 ["2", "Open your project's app/globals.css file."],
                 ["3", "Paste the block, replacing any existing @layer base block."],
                 ["4", "Save the file - your components will update immediately."],
               ].map(([step, text]) => (
-                <div key={step} className="flex gap-2.5">
-                  <span className="shrink-0 font-mono text-[10px] text-[#8b1a4a] w-4 text-right pt-0.5">{step}.</span>
+                <div key={step} className="flex gap-3">
+                  <span className="shrink-0 font-mono text-[10px] text-[#8b1a4a] w-4 text-right pt-1">{step}.</span>
                   <span className="leading-relaxed">{text}</span>
                 </div>
               ))}

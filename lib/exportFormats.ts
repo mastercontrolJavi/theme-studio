@@ -1,4 +1,4 @@
-import { hslToHex } from "./colorUtils";
+import { colorToHex } from "./colorValue";
 import { TOKEN_INFO } from "./tokenInfo";
 import { CSS_VARS, type ThemeConfig } from "./types";
 
@@ -47,7 +47,7 @@ export const FORMATS: FormatSpec[] = [
     filename: "theme.json",
     mime: "application/json",
     blurb:
-      "Design tokens in the W3C community-group shape, hex as the value and the HSL triplet under $extensions. For pipelines, Figma sync, or your own scripts.",
+      "Design tokens with canonical OKLCH values, including opacity. Hex previews sit under $extensions for tools that need them.",
   },
 ];
 
@@ -124,7 +124,7 @@ export function generateTailwind(
   lines.push("/* bg-background, text-muted-foreground, border-border, ... */");
   lines.push("@theme inline {");
   for (const key of CSS_VARS) {
-    lines.push(`  --color-${key}: hsl(var(--${key}));`);
+    lines.push(`  --color-${key}: var(--${key});`);
   }
   lines.push("");
   lines.push("  --radius-sm: calc(var(--radius) * 0.6);");
@@ -140,10 +140,8 @@ export function generateTailwind(
  * Design tokens in the W3C Design Tokens Community Group shape: $type and
  * $value on every token, groups for the two modes.
  *
- * The HSL triplet goes under $extensions rather than as a sibling key, since
- * that is the spec's own escape hatch for format-specific data. The
- * descriptions are the same ones the info panels show, so an exported file
- * explains itself.
+ * Canonical OKLCH is the value. A hex preview is included only as a convenience
+ * for tools that cannot display OKLCH yet; alpha remains in $value.
  */
 export function generateJSON(
   config: ThemeConfig,
@@ -155,9 +153,9 @@ export function generateJSON(
         key,
         {
           $type: "color",
-          $value: hslToHex(config[mode][key]),
+          $value: config[mode][key],
           $description: TOKEN_INFO[key].description,
-          $extensions: { "sh.shadcn.hsl": config[mode][key] },
+          $extensions: { "theme-studio.hex-preview": colorToHex(config[mode][key]) },
         },
       ])
     );
