@@ -269,7 +269,7 @@ export function TourOverlay({
             type="button"
             onClick={close}
             aria-label="Skip the tour"
-            className="-mt-1 -mr-1 cursor-pointer rounded-[4px] p-1 text-ivory-faint transition-colors hover:text-ivory-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent"
+            className="-mr-2 -mt-2 flex h-10 w-10 cursor-pointer items-center justify-center rounded-md text-ivory-faint transition-colors hover:text-ivory-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent"
           >
             <X size={13} />
           </button>
@@ -277,36 +277,36 @@ export function TourOverlay({
 
         <h2
           id="tour-title"
-          className="mt-1.5 text-[19px] leading-tight text-ivory-ink"
+          className="mt-2 text-[19px] leading-tight text-ivory-ink"
           style={{ fontFamily: "var(--font-display)" }}
         >
           {current.title}
         </h2>
-        <p className="mt-1.5 text-[11.5px] leading-relaxed text-ivory-muted">
+        <p className="mt-2 text-[11.5px] leading-relaxed text-ivory-muted">
           {spotlight ? current.body : (current.mobileBody ?? current.body)}
         </p>
 
-        <div className="mt-3.5 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5" aria-hidden>
+        <div className="mt-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2" aria-hidden>
             {STEPS.map((s, i) => (
               <span
                 key={s.target}
                 className={[
                   "h-[5px] rounded-full transition-all duration-200 motion-reduce:transition-none",
                   i === step
-                    ? "w-3.5 bg-ivory-accent"
+                    ? "w-4 bg-ivory-accent"
                     : "w-[5px] bg-ivory-border-strong",
                 ].join(" ")}
               />
             ))}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             {step > 0 && (
               <button
                 type="button"
                 onClick={() => setStep((s) => s - 1)}
-                className="inline-flex cursor-pointer items-center gap-1 rounded-[7px] border border-ivory-border bg-ivory-elevated px-2.5 py-1.5 font-mono text-[10px] text-ivory-ink transition-colors hover:bg-ivory-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent"
+                className="inline-flex min-h-10 cursor-pointer items-center gap-1 rounded-[7px] border border-ivory-border bg-ivory-elevated px-3 py-2 font-mono text-[10px] text-ivory-ink transition-colors hover:bg-ivory-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent"
               >
                 <ArrowLeft size={11} />
                 Back
@@ -316,7 +316,7 @@ export function TourOverlay({
               ref={nextRef}
               type="button"
               onClick={() => (last ? close() : setStep((s) => s + 1))}
-              className="inline-flex cursor-pointer items-center gap-1 rounded-[7px] bg-ivory-accent px-3 py-1.5 font-mono text-[10px] text-ivory-accent-text transition-colors hover:bg-ivory-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2"
+              className="inline-flex min-h-10 cursor-pointer items-center gap-1 rounded-[7px] bg-ivory-accent px-3 py-2 font-mono text-[10px] text-ivory-accent-text transition-colors hover:bg-ivory-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2"
             >
               {last ? "Done" : "Next"}
               {!last && <ArrowRight size={11} />}

@@ -33,14 +33,14 @@ export function TokenDetails({
   const pairings = pairingsForVar(varName);
 
   return (
-    <div className="mb-1.5 ml-8.5 rounded-[7px] border border-ivory-border bg-ivory-elevated px-2.5 py-2.5">
+    <div className="mb-2 ml-9 rounded-[7px] border border-ivory-border bg-ivory-elevated px-3 py-3">
       <p className="font-mono text-[9px] uppercase tracking-[0.1em] text-ivory-faint">
         --{varName}
       </p>
       <p className="mt-1 text-[11px] leading-relaxed text-ivory-ink">
         {info.description}
       </p>
-      <p className="mt-1.5 text-[10.5px] leading-relaxed text-ivory-muted">
+      <p className="mt-2 text-[10.5px] leading-relaxed text-ivory-muted">
         <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-ivory-faint">
           in the preview{" "}
         </span>
@@ -48,12 +48,12 @@ export function TokenDetails({
       </p>
 
       {info.note && (
-        <p className="mt-2 rounded-[5px] border border-ivory-accent/20 bg-ivory-accent-tint px-2 py-1.5 text-[10px] leading-relaxed text-ivory-accent">
+        <p className="mt-2 rounded-[5px] border border-ivory-accent/20 bg-ivory-accent-tint px-2 py-2 text-[10px] leading-relaxed text-ivory-accent">
           {info.note}
         </p>
       )}
 
-      <div className="mt-2.5 flex items-center gap-2">
+      <div className="mt-3 flex items-center gap-2">
         <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-ivory-faint">
           contrast
         </span>
@@ -61,12 +61,12 @@ export function TokenDetails({
       </div>
 
       {pairings.length === 0 ? (
-        <p className="mt-1.5 text-[10px] leading-relaxed text-ivory-muted">
+        <p className="mt-2 text-[10px] leading-relaxed text-ivory-muted">
           Not measured. No component in this set pairs it with anything, so
           there is no ratio to report.
         </p>
       ) : (
-        <div className="mt-1.5 flex flex-col gap-1.5">
+        <div className="mt-2 flex flex-col gap-2">
           {pairings.map((pairing) => {
             const result = gradePairing(values, pairing);
             const fix = result.aa
@@ -75,7 +75,7 @@ export function TokenDetails({
             const counted = result.counted;
             return (
               <div key={pairing.id}>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <span
                     className={[
                       "h-[5px] w-[5px] shrink-0 rounded-full",
@@ -104,7 +104,7 @@ export function TokenDetails({
                   {counted ? (
                     <span
                       className={[
-                        "inline-flex shrink-0 items-center gap-0.5 font-mono text-[9px] uppercase",
+                        "inline-flex shrink-0 items-center gap-1 font-mono text-[9px] uppercase",
                         result.aa ? "text-ivory-pass" : "text-ivory-fail",
                       ].join(" ")}
                     >
@@ -125,11 +125,11 @@ export function TokenDetails({
                   )}
                 </div>
                 {fix && (
-                  <div className="mt-1.5 ml-[11px]">
+                  <div className="mt-2 ml-[11px]">
                     <FixContrastButton
                       fix={fix}
                       required={requiredRatio(pairing)}
-                      onApply={(f) => onVarChange(f.token, f.hsl)}
+                      onApply={(f) => onVarChange(f.token, f.value)}
                     />
                   </div>
                 )}
