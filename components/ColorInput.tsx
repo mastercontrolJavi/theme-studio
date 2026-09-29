@@ -1,358 +1,133 @@
 "use client";
 
-import { useId, useState } from "react";
-import dynamic from "next/dynamic";
+import { useId, useRef, useState } from "react";
 import { Info } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Collapse } from "./Collapse";
-import { TokenDetails } from "./TokenDetails";
-import {
-  hexToHsl,
-  hslToHex,
-  hslToOklch,
-  normalizeHex,
-  oklchToHsl,
-  parseHsl,
-  parseHslLoose,
-} from "@/lib/colorUtils";
-import { contrastRatio, formatRatio } from "@/lib/contrast";
-import type { ColorFormat, CSSVar, ThemeValues } from "@/lib/types";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { canonicalColor, colorToHex, displayColor, parseDisplayColor } from "@/lib/colorValue";
+import { formatRatio, gradePairing, pairingsForVar } from "@/lib/contrast";
+import type { CSSVar, ThemeValues } from "@/lib/types";
 import { tokenLabel } from "@/lib/tokenInfo";
+import { Collapse } from "./Collapse";
+import { SolidColorPicker } from "./SolidColorPicker";
+import { TokenDetails } from "./TokenDetails";
 
-// react-colorful is client-only; SSR-disabled to avoid hydration mismatch
-const HexColorPicker = dynamic(
-  () => import("react-colorful").then((m) => m.HexColorPicker),
-  { ssr: false }
-);
-
-/** The label Simple mode derives for you, shown so the pairing is never magic. */
-export interface AutoPair {
-  token: CSSVar;
-  hslValue: string;
-}
+export interface AutoPair { token: CSSVar }
 
 interface Props {
   varName: CSSVar;
-  hslValue: string;
+  value: string;
   onChange: (next: string) => void;
-  /** Simple mode names the thing on screen; Advanced names the variable. */
   plainLabel?: boolean;
-  /** Advanced always shows --var and HSL. Simple hides them behind a toggle. */
   showRaw?: boolean;
   autoPair?: AutoPair;
-  /** Full palette for the mode being edited, so the info panel can score it. */
   values: ThemeValues;
-  onVarChange: (key: CSSVar, hsl: string) => void;
-  /** Notation the text input reads and writes. */
-  format?: ColorFormat;
+  onVarChange: (key: CSSVar, value: string) => void;
+  isMobile: boolean;
+  savedSwatches: string[];
+  onSaveSwatch: (value: string) => void;
+  onRemoveSwatch: (value: string) => void;
+  onPickerOpen: () => void;
 }
 
-/** The stored HSL rendered in the notation the input is showing. */
-function toDisplay(hsl: string, format: ColorFormat): string {
-  if (format === "hex") return hslToHex(hsl);
-  if (format === "oklch") return hslToOklch(hsl);
-  return hsl;
-}
-
-/** Parse a typed value back to the stored form, or null when it is not valid. */
-function fromDisplay(raw: string, format: ColorFormat): string | null {
-  if (format === "hex") {
-    const normalized = normalizeHex(raw);
-    return normalized ? hexToHsl(normalized) : null;
-  }
-  if (format === "oklch") return oklchToHsl(raw);
-  return parseHslLoose(raw);
-}
-
-const FORMAT_HINT: Record<ColorFormat, string> = {
-  hex: "Expected a hex colour, like #8b1a4a or #8b1.",
-  hsl: "Expected hue, saturation, lightness, like 336 68% 32%.",
-  oklch: "Expected oklch(L C H), like oklch(0.41 0.145 5.4).",
-};
-
-/**
- * Simple mode derives the label colour that sits on this swatch. Showing the
- * swatch and its measured ratio keeps that from being a black box: you can see
- * what was chosen and whether it reads.
- */
-function AutoPairReadout({
-  ground,
-  pair,
-}: {
-  ground: string;
-  pair: AutoPair;
-}) {
-  const ratio = contrastRatio(pair.hslValue, ground);
-  const passes = ratio >= 4.5;
-  return (
-    <span className="mt-0.5 flex items-center gap-1 font-mono text-[8.5px] text-ivory-faint">
-      <span
-        className="h-2 w-2 shrink-0 rounded-[2px] border border-ivory-border"
-        style={{ background: hslToHex(pair.hslValue) }}
-      />
-      <span className="truncate">label auto</span>
-      <span className={passes ? "text-ivory-pass" : "text-ivory-fail"}>
-        {formatRatio(ratio)}{" "}
-        <span className="sr-only">{passes ? "passes " : "fails "}</span>
-        {passes ? "AA" : "fails AA"}
-      </span>
-    </span>
-  );
-}
-
-export function ColorInput({
-  varName,
-  hslValue,
-  onChange,
-  plainLabel = false,
-  showRaw = true,
-  autoPair,
-  values,
-  onVarChange,
-  format = "hex",
-}: Props) {
+export function ColorInput({ varName, value, onChange, plainLabel = false,
+  showRaw = false, autoPair, values, onVarChange, isMobile, savedSwatches,
+  onSaveSwatch, onRemoveSwatch, onPickerOpen }: Props) {
   const [open, setOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [draft, setDraft] = useState(() => displayColor(value, "hex"));
+  const [invalid, setInvalid] = useState(false);
+  const [previousValue, setPreviousValue] = useState(value);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const infoId = useId();
   const errorId = useId();
-  const [draft, setDraft] = useState<string>(() => toDisplay(hslValue, format));
-  const [invalid, setInvalid] = useState(false);
 
-  // Re-sync the draft when the value or the notation changes from outside
-  // (preset switch, URL load, format toggle). Render-time state adjustment,
-  // per React's derived-state pattern.
-  const [prevSync, setPrevSync] = useState(`${hslValue}|${format}`);
-  if (prevSync !== `${hslValue}|${format}`) {
-    setPrevSync(`${hslValue}|${format}`);
-    setDraft(toDisplay(hslValue, format));
+  if (previousValue !== value) {
+    setPreviousValue(value);
+    setDraft(displayColor(value, "hex"));
     setInvalid(false);
   }
-
-  /**
-   * Commit a typed value.
-   *
-   * An unparseable entry leaves the text alone and says what was expected.
-   * Silently reverting, which is what this used to do, throws away the typing
-   * and never explains why.
-   *
-   * A value that renders back to the same display string is treated as a
-   * no-op. OKLCH is shown rounded, so re-committing what is already on screen
-   * would otherwise nudge the colour by a hex level without the user changing
-   * anything.
-   */
-  function commitValue(raw: string) {
-    if (raw.trim() === "") {
-      setDraft(toDisplay(hslValue, format));
-      setInvalid(false);
-      return;
-    }
-    const next = fromDisplay(raw, format);
-    if (!next) {
-      setInvalid(true);
-      return;
-    }
-    setInvalid(false);
-    if (toDisplay(next, format) !== toDisplay(hslValue, format)) {
-      onChange(next);
-    }
-    setDraft(toDisplay(next, format));
-  }
-
-  /** Escape abandons the edit and puts the current value back. */
-  function cancelEdit() {
-    setDraft(toDisplay(hslValue, format));
-    setInvalid(false);
-  }
-
-  const currentHex = hslToHex(hslValue);
-  const parsed = parseHsl(hslValue);
 
   const label = plainLabel ? tokenLabel(varName) : `--${varName}`;
+  const pairs = pairingsForVar(varName).filter((pair) => !pair.informational)
+    .map((pair) => gradePairing(values, pair));
+  const worst = pairs.reduce((a, b) => (!a || b.ratio < a.ratio ? b : a), pairs[0]);
+  const aaPass = pairs.length > 0 && pairs.every((result) => result.aa);
+  const textPairs = pairs.filter((result) => result.aaaApplies);
+  const aaaPass = textPairs.length > 0 && textPairs.every((result) => result.aaa);
 
-  /*
-   * Hex is short enough to sit in the row. HSL and OKLCH are not: at the
-   * 322px panel width they squeezed "--background" down to "--backgr..." and
-   * still clipped their own value. Those get a full-width line of their own.
-   */
-  const inline = format === "hex";
+  function commit(raw: string) {
+    if (!raw.trim()) { setDraft(colorToHex(value)); setInvalid(false); return; }
+    const parsed = parseDisplayColor(raw, "hex", value);
+    if (!parsed) { setInvalid(true); return; }
+    setInvalid(false);
+    if (parsed !== canonicalColor(value)) onChange(parsed);
+    setDraft(colorToHex(parsed));
+  }
 
-  const valueInput = (
-    <input
-      type="text"
-      value={draft}
-      onChange={(e) => {
-        setDraft(e.target.value);
-        if (invalid) setInvalid(false);
-      }}
-      onBlur={(e) => commitValue(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          commitValue(e.currentTarget.value);
-        } else if (e.key === "Escape") {
-          cancelEdit();
-        }
-      }}
-      spellCheck={false}
-      autoComplete="off"
-      aria-label={`${format} value for ${label}`}
-      aria-invalid={invalid || undefined}
-      aria-describedby={invalid ? errorId : undefined}
-      className={[
-        "h-6.5 rounded-[5px] border bg-ivory-base px-2 font-mono text-[10.5px] text-ivory-muted hover:text-ivory-ink focus:text-ivory-ink focus:outline-none focus:bg-white transition-colors",
-        inline ? "w-19.5 shrink-0" : "w-full",
-        invalid
-          ? "border-ivory-fail bg-ivory-fail-tint text-ivory-fail focus:border-ivory-fail"
-          : "border-ivory-border focus:border-ivory-accent",
-      ].join(" ")}
-    />
-  );
+  const picker = <SolidColorPicker label={label} value={value} onChange={onChange}
+    saved={savedSwatches} onAdd={onSaveSwatch} onRemove={onRemoveSwatch} />;
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (next) onPickerOpen();
+  }
+  const swatchTrigger = <button ref={triggerRef} type="button"
+    aria-label={`Pick color for ${label}`} aria-expanded={open}
+    onClick={isMobile ? () => handleOpenChange(true) : undefined}
+    className="h-10 w-10 shrink-0 rounded-md border border-ivory-border shadow-[inset_0_1px_2px_rgba(0,0,0,0.12)] transition-colors duration-150 ease-out hover:border-ivory-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent motion-reduce:transition-none"
+    style={{ background: value }} />;
 
-  return (
-    <div>
-      <div className="flex items-center gap-2.5 py-1.5">
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              aria-label={`Pick color for ${label}`}
-              className="h-6 w-6 shrink-0 rounded-md border border-ivory-border hover:border-ivory-border-strong hover:scale-105 transition-[border-color,transform] cursor-pointer shadow-[inset_0_1px_2px_rgba(0,0,0,0.18),inset_0_-1px_1px_rgba(255,255,255,0.25)] ring-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent"
-              style={{ background: currentHex }}
-            />
-          </PopoverTrigger>
-          <PopoverContent
-            align="start"
-            side="right"
-            sideOffset={8}
-            className="w-auto p-3 rounded-[10px] border-ivory-border bg-ivory-base shadow-[0_12px_32px_-8px_rgba(26,10,20,0.28)]"
-          >
-            <div className="color-picker-wrapper">
-              <HexColorPicker
-                color={currentHex}
-                onChange={(next) => {
-                  const hsl = hexToHsl(next);
-                  if (hsl) onChange(hsl);
-                  setDraft(toDisplay(hsl ?? hslValue, format));
-                  setInvalid(false);
-                }}
-              />
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-ivory-muted">
-                {format}
-              </span>
-              <input
-                type="text"
-                value={draft}
-                aria-label={`${format} value for ${label}`}
-                onChange={(e) => {
-                  setDraft(e.target.value);
-                  if (invalid) setInvalid(false);
-                }}
-                onBlur={(e) => commitValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    commitValue(e.currentTarget.value);
-                    if (fromDisplay(e.currentTarget.value, format)) setOpen(false);
-                  } else if (e.key === "Escape") {
-                    cancelEdit();
-                  }
-                }}
-                className={[
-                  "flex-1 h-7 rounded border bg-ivory-base px-2 font-mono text-[11px] text-ivory-ink focus:outline-none",
-                  invalid
-                    ? "border-ivory-fail focus:border-ivory-fail"
-                    : "border-ivory-border focus:border-ivory-accent",
-                ].join(" ")}
-              />
-            </div>
-            {invalid && (
-              <p className="mt-1.5 font-mono text-[9.5px] leading-relaxed text-ivory-fail">
-                {FORMAT_HINT[format]}
-              </p>
-            )}
-          </PopoverContent>
-        </Popover>
-
-        <div className="flex-1 min-w-0 flex flex-col">
-          {plainLabel ? (
-            <span className="text-[11.5px] text-ivory-ink truncate">
-              {tokenLabel(varName)}
-            </span>
-          ) : (
-            <span className="font-mono text-[11px] text-ivory-ink truncate">
-              --{varName}
-            </span>
-          )}
-          {showRaw && parsed && (
-            <span className="font-mono text-[8.5px] text-ivory-faint truncate">
-              {plainLabel ? `--${varName} · ` : ""}
-              {Math.round(parsed.h)} {Math.round(parsed.s)}% {Math.round(parsed.l)}%
-            </span>
-          )}
-          {autoPair && <AutoPairReadout ground={hslValue} pair={autoPair} />}
-        </div>
-
-        {inline && valueInput}
-
-        <button
-          type="button"
-          onClick={() => setInfoOpen((v) => !v)}
-          aria-expanded={infoOpen}
-          aria-controls={infoId}
-          aria-label={`What does ${label} do?`}
-          className={[
-            "shrink-0 cursor-pointer rounded-[4px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent",
-            infoOpen
-              ? "text-ivory-accent"
-              : "text-ivory-faint hover:text-ivory-accent",
-          ].join(" ")}
-        >
-          <Info size={13} />
-        </button>
-
-        <style jsx global>{`
-          .color-picker-wrapper .react-colorful {
-            width: 200px;
-            height: 180px;
-          }
-          .color-picker-wrapper .react-colorful__saturation {
-            border-radius: 6px;
-            border-bottom: none;
-          }
-          .color-picker-wrapper .react-colorful__hue {
-            height: 12px;
-            border-radius: 999px;
-            margin-top: 10px;
-          }
-          .color-picker-wrapper .react-colorful__pointer {
-            width: 16px;
-            height: 16px;
-            border-width: 2px;
-          }
-        `}</style>
-      </div>
-
-      {!inline && <div className="mb-1.5 ml-8.5">{valueInput}</div>}
-
-      {invalid && (
-        <p
-          id={errorId}
-          role="alert"
-          className="mb-1.5 ml-8.5 font-mono text-[9.5px] leading-relaxed text-ivory-fail"
-        >
-          {FORMAT_HINT[format]} Press Escape to put the old value back.
-        </p>
-      )}
-
-      <Collapse open={infoOpen}>
-        <div id={infoId}>
-          <TokenDetails
-            varName={varName}
-            values={values}
-            onVarChange={onVarChange}
-          />
-        </div>
-      </Collapse>
+  return <div className="border-t border-ivory-border/70 py-2 first:border-t-0">
+    <div className="flex min-h-10 items-center gap-2">
+      {isMobile ? <>
+        {swatchTrigger}
+        <Sheet open={open} onOpenChange={handleOpenChange}>
+          <SheetContent side="bottom" className="max-h-[calc(100dvh-16px)] overflow-y-auto rounded-t-xl border-ivory-border bg-ivory-base p-4 text-ivory-ink"
+            onCloseAutoFocus={(event) => { event.preventDefault(); triggerRef.current?.focus(); }}>
+            <SheetTitle className="font-display text-2xl font-normal text-ivory-ink">{label}</SheetTitle>
+            <SheetDescription className="mb-4 font-mono text-xs text-ivory-muted">Solid color</SheetDescription>
+            {picker}
+          </SheetContent>
+        </Sheet>
+      </> : <Popover open={open} onOpenChange={handleOpenChange}>
+        <PopoverTrigger asChild>{swatchTrigger}</PopoverTrigger>
+        <PopoverContent side="right" sideOffset={316}
+          className="max-h-[calc(100dvh-32px)] w-[336px] overflow-y-auto rounded-xl border-ivory-border bg-ivory-base p-4 shadow-[0_16px_48px_rgba(26,10,20,0.22)] duration-150 ease-out motion-reduce:animate-none"
+          onCloseAutoFocus={(event) => { event.preventDefault(); triggerRef.current?.focus(); }}>
+          <div className="mb-4 font-mono text-xs text-ivory-muted">{label}</div>
+          {picker}
+        </PopoverContent>
+      </Popover>}
+      <span className="min-w-0 flex-1 truncate font-mono text-xs text-ivory-ink" title={label}>{label}</span>
+      <input type="text" value={draft} spellCheck={false}
+        onChange={(event) => { setDraft(event.target.value); setInvalid(false); }}
+        onBlur={(event) => commit(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") commit(event.currentTarget.value);
+          if (event.key === "Escape") { setDraft(colorToHex(value)); setInvalid(false); }
+        }}
+        aria-label={`Hex value for ${label}`} aria-invalid={invalid || undefined}
+        aria-describedby={invalid ? errorId : undefined}
+        className={`h-10 w-[88px] shrink-0 rounded-md border bg-ivory-base px-2 font-mono text-xs text-ivory-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent ${invalid ? "border-ivory-fail" : "border-ivory-border"}`} />
     </div>
-  );
+    <div className="ml-12 flex min-h-10 items-center justify-between gap-1 font-mono text-[10px]">
+      <span className="flex flex-wrap items-center gap-1">
+        {worst ? <>
+          <span className={aaPass ? "text-ivory-pass" : "text-ivory-fail"}>{aaPass ? "✓" : "×"} AA</span>
+          {textPairs.length > 0 && <span className={aaaPass ? "text-ivory-pass" : "text-ivory-fail"}>{aaaPass ? "✓" : "×"} AAA</span>}
+          <span className="text-ivory-muted">{formatRatio(worst.ratio)}</span>
+          {pairs.length > 1 && <span className="text-ivory-faint">worst of {pairs.length}</span>}
+        </> : <span className="text-ivory-faint">No contrast pair</span>}
+        {autoPair && <span className="text-ivory-faint">· label auto</span>}
+      </span>
+      <button type="button" onClick={() => setInfoOpen((current) => !current)}
+        aria-expanded={infoOpen} aria-controls={infoId} aria-label={`What does ${label} do?`}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-ivory-muted hover:text-ivory-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent">
+        <Info size={16} aria-hidden="true" />
+      </button>
+    </div>
+    {showRaw && <p className="ml-12 mt-1 break-all font-mono text-[10px] text-ivory-muted">{value}</p>}
+    {invalid && <p id={errorId} role="alert" className="ml-12 mt-1 text-xs text-ivory-fail">Enter a valid hex color.</p>}
+    <Collapse open={infoOpen}><div id={infoId}><TokenDetails varName={varName} values={values} onVarChange={onVarChange} /></div></Collapse>
+  </div>;
 }

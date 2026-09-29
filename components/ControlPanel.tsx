@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check, ChevronDown, Download, Link2 } from "lucide-react";
 import { ColorInput } from "./ColorInput";
+import { canonicalColor } from "@/lib/colorValue";
 import { ContrastPanel } from "./ContrastPanel";
 import { PresetSelector } from "./PresetSelector";
 import { Collapse } from "./Collapse";
@@ -12,7 +13,6 @@ import {
   SIMPLE_GROUP_VARS,
   CSS_VARS,
   VAR_GROUPS,
-  type ColorFormat,
   type CSSVar,
   type DetailLevel,
   type Mode,
@@ -45,12 +45,13 @@ interface Props {
   onDetailChange: (detail: DetailLevel) => void;
   activePreset: string;
   onPresetSelect: (name: string) => void;
-  onVarChange: (key: CSSVar, hsl: string) => void;
+  onVarChange: (key: CSSVar, value: string) => void;
   onReset: () => void;
   onExportClick: () => void;
   onSeedOpen: () => void;
   /** Resolves false when the clipboard is unavailable. */
   onCopyLink: () => Promise<boolean>;
+  isMobile: boolean;
 }
 
 export function ControlPanel({
@@ -67,34 +68,50 @@ export function ControlPanel({
   onExportClick,
   onSeedOpen,
   onCopyLink,
+  isMobile,
 }: Props) {
   const simple = detail === "simple";
 
   const [showValues, setShowValues] = useState(false);
-  const [linkState, setLinkState] = useState<"idle" | "copied" | "error">(
+  const [linkState, setLinkState] = useState<"idle" | "copying" | "copied" | "error">(
     "idle"
   );
-  // Simple mode stays on hex: choosing a notation is an Advanced concern.
-  const [format, setFormat] = useState<ColorFormat>("hex");
+  const [savedOverride, setSavedOverride] = useState<string[] | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem("theme-studio:saved-swatches:v1");
+      if (!raw) return null;
+      const parsed: unknown = JSON.parse(raw);
+      if (!Array.isArray(parsed) || parsed.length > 10) return null;
+      const colors = parsed.map((entry: unknown) =>
+        typeof entry === "string" ? canonicalColor(entry) : null
+      );
+      if (colors.some((entry) => entry === null)) return null;
+      return colors as string[];
+    } catch {
+      // Corrupt or unavailable storage falls back to the current palette.
+      return null;
+    }
+  });
 
   useEffect(() => {
-    if (linkState === "idle") return;
+    if (linkState === "idle" || linkState === "copying") return;
     const t = setTimeout(() => setLinkState("idle"), 1800);
     return () => clearTimeout(t);
   }, [linkState]);
-  const [contrastOpen, setContrastOpen] = useState(() => detail === "advanced");
+  const [contrastOpen, setContrastOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
     defaultOpenGroups(detail)
   );
 
-  // Switching detail level re-seeds the disclosure defaults, so Advanced opens
-  // on the full breakdown and Simple falls back to the score alone. Render-time
+  // Switching detail level re-seeds the group defaults, while contrast stays
+  // collapsed so the token rows remain visible. Render-time
   // state adjustment, per React's derived-state pattern.
   const [prevDetail, setPrevDetail] = useState(detail);
   if (prevDetail !== detail) {
     setPrevDetail(detail);
     setOpenGroups(defaultOpenGroups(detail));
-    setContrastOpen(detail === "advanced");
+    setContrastOpen(false);
     if (detail === "advanced") setShowValues(false);
   }
 
@@ -103,6 +120,24 @@ export function ControlPanel({
   }
 
   const values = theme[mode];
+  const paletteSwatches = Array.from(new Set(CSS_VARS.map((key) => values[key]))).slice(0, 5);
+  const savedSwatches = savedOverride ?? paletteSwatches;
+  function persistSwatches(next: string[]) {
+    setSavedOverride(next);
+    try {
+      window.localStorage.setItem("theme-studio:saved-swatches:v1", JSON.stringify(next));
+    } catch {
+      // The current session still has the saved colors.
+    }
+  }
+  function saveSwatch(value: string) {
+    const canonical = canonicalColor(value);
+    if (!canonical || savedSwatches.includes(canonical) || savedSwatches.length >= 10) return;
+    persistSwatches([...savedSwatches, canonical]);
+  }
+  function removeSwatch(value: string) {
+    persistSwatches(savedSwatches.filter((entry) => entry !== value));
+  }
 
   // Simple mode narrows both the group list and the rows inside each group.
   const groups = simple
@@ -114,9 +149,9 @@ export function ControlPanel({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain thin-scroll px-4.5 pt-4.5 pb-3.5">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain thin-scroll px-5 pt-5 pb-4">
         {/* Paint-chip preset gallery */}
-        <section className="mb-5.5" data-tour="presets">
+        <section className="mb-6" data-tour="presets">
           <div className="flex items-center justify-between mb-3">
             <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ivory-muted">
               Preset Gallery
@@ -152,7 +187,7 @@ export function ControlPanel({
         />
 
         {/* Sunken tactile wells: which palette, and how much of it */}
-        <section className="mb-5.5 grid grid-cols-2 gap-2.5">
+        <section className="mb-6 grid grid-cols-2 gap-3">
           <div data-tour="mode">
             <div className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ivory-muted mb-3">
               Mode
@@ -167,7 +202,7 @@ export function ControlPanel({
                     aria-pressed={active}
                     onClick={() => onModeChange(m)}
                     className={[
-                      "flex-1 flex items-center justify-center gap-1 py-2 rounded-[7px] font-mono text-[10.5px] capitalize cursor-pointer transition-all duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent",
+                      "min-h-10 flex-1 flex items-center justify-center gap-1 py-2 rounded-[7px] font-mono text-[10.5px] capitalize cursor-pointer transition-all duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent",
                       active
                         ? "bg-ivory-base text-ivory-ink shadow-[0_1px_3px_rgba(26,10,20,0.16)]"
                         : "bg-transparent text-ivory-faint hover:text-ivory-muted",
@@ -200,10 +235,10 @@ export function ControlPanel({
                     title={
                       d === "simple"
                         ? "Plain-language names, the colours most themes actually change"
-                        : "Every variable, raw names and HSL values"
+                        : "Every variable and raw token names"
                     }
                     className={[
-                      "flex-1 flex items-center justify-center py-2 rounded-[7px] font-mono text-[10.5px] capitalize cursor-pointer transition-all duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent",
+                      "min-h-10 flex-1 flex items-center justify-center py-2 rounded-[7px] font-mono text-[10.5px] capitalize cursor-pointer transition-all duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent",
                       active
                         ? "bg-ivory-base text-ivory-ink shadow-[0_1px_3px_rgba(26,10,20,0.16)]"
                         : "bg-transparent text-ivory-faint hover:text-ivory-muted",
@@ -231,33 +266,7 @@ export function ControlPanel({
             >
               {showValues ? "hide css values" : "show css values"}
             </button>
-          ) : (
-            <div
-              role="group"
-              aria-label="Value notation"
-              className="flex rounded-[7px] bg-ivory-elevated p-0.5 shadow-[inset_0_1px_3px_rgba(26,10,20,0.1)]"
-            >
-              {(["hex", "hsl", "oklch"] as const).map((f) => {
-                const active = format === f;
-                return (
-                  <button
-                    key={f}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => setFormat(f)}
-                    className={[
-                      "rounded-[5px] px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em] cursor-pointer transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent",
-                      active
-                        ? "bg-ivory-base text-ivory-ink shadow-[0_1px_2px_rgba(26,10,20,0.14)]"
-                        : "text-ivory-faint hover:text-ivory-muted",
-                    ].join(" ")}
-                  >
-                    {f}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          ) : <span className="font-mono text-[10px] text-ivory-muted">19 tokens</span>}
         </div>
 
         <div className="flex flex-col" data-tour="tokens">
@@ -269,7 +278,7 @@ export function ControlPanel({
                   type="button"
                   onClick={() => toggleGroup(group.id)}
                   aria-expanded={isOpen}
-                  className="w-full flex items-center justify-between py-2.5 px-0.5 group cursor-pointer rounded-[4px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent"
+                  className="w-full flex items-center justify-between py-3 px-1 group cursor-pointer rounded-[4px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent"
                 >
                   <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ivory-muted group-hover:text-ivory-ink transition-colors">
                     {group.label}
@@ -295,16 +304,22 @@ export function ControlPanel({
                         <ColorInput
                           key={v}
                           varName={v}
-                          hslValue={values[v]}
+                          value={values[v]}
                           onChange={(next) => onVarChange(v, next)}
                           values={values}
                           onVarChange={onVarChange}
                           plainLabel={simple}
-                          showRaw={!simple || showValues}
-                          format={simple ? "hex" : format}
+                          showRaw={showValues}
+                          isMobile={isMobile}
+                          savedSwatches={savedSwatches}
+                          onSaveSwatch={saveSwatch}
+                          onRemoveSwatch={removeSwatch}
+                          onPickerOpen={() => {
+                            if (savedOverride === null) persistSwatches(paletteSwatches);
+                          }}
                           autoPair={
                             paired
-                              ? { token: paired, hslValue: values[paired] }
+                              ? { token: paired }
                               : undefined
                           }
                         />
@@ -335,13 +350,13 @@ export function ControlPanel({
 
       {/* Take-it-away actions, pinned to the bottom */}
       <div
-        className="border-t border-ivory-border p-3.5 bg-ivory-surface shrink-0 flex gap-2"
+        className="border-t border-ivory-border p-4 bg-ivory-surface shrink-0 flex gap-2"
         data-tour="export"
       >
         <button
           type="button"
           onClick={onExportClick}
-          className="flex-1 h-10.5 rounded-[9px] bg-ivory-accent text-ivory-accent-text text-[13.5px] font-medium hover:bg-ivory-accent-hover active:translate-y-px transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_4px_14px_-6px_rgba(139,26,74,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2"
+          className="flex-1 h-11 rounded-[9px] bg-ivory-accent text-ivory-accent-text text-[13.5px] font-medium hover:bg-ivory-accent-hover active:translate-y-px transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_4px_14px_-6px_rgba(139,26,74,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2"
           style={{ fontFamily: "var(--font-body)" }}
         >
           <Download size={14} />
@@ -350,18 +365,22 @@ export function ControlPanel({
         <button
           type="button"
           onClick={async () => {
+            setLinkState("copying");
             setLinkState((await onCopyLink()) ? "copied" : "error");
           }}
+          disabled={linkState === "copying"}
           aria-label="Copy a link to this theme"
           title={
             linkState === "copied"
               ? "Link copied"
+              : linkState === "copying"
+                ? "Copying link"
               : linkState === "error"
                 ? "Could not reach the clipboard"
                 : "Copy a link to this theme"
           }
           className={[
-            "h-10.5 w-10.5 shrink-0 rounded-[9px] border transition-colors cursor-pointer flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2",
+            "h-11 w-11 shrink-0 rounded-[9px] border transition-colors cursor-pointer flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2",
             linkState === "copied"
               ? "border-ivory-pass/40 bg-ivory-pass-tint text-ivory-pass"
               : linkState === "error"
@@ -372,14 +391,13 @@ export function ControlPanel({
           {linkState === "copied" ? <Check size={15} /> : <Link2 size={15} />}
         </button>
       </div>
-      <p
-        aria-live="polite"
-        className="sr-only"
-      >
+      <p aria-live="polite" role="status" className="px-4 pb-2 font-mono text-xs text-ivory-muted min-h-6">
         {linkState === "copied"
           ? "Link copied to clipboard"
+          : linkState === "copying"
+            ? "Copying link..."
           : linkState === "error"
-            ? "Could not copy the link"
+            ? "Could not copy the link. Try again."
             : ""}
       </p>
     </div>

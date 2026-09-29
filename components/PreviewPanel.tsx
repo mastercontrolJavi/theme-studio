@@ -100,7 +100,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-3.5">
+    <section className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
         <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground whitespace-nowrap">
           {label}
@@ -129,12 +129,12 @@ export function PreviewPanel({ name, mode, values, headerNote }: Props) {
        * inert and dark mode was previewing on swapped variables alone.
        */
       className={[
-        "preview-surface rounded-2xl p-6 sm:px-8 sm:pt-7.5 sm:pb-8.5 space-y-7.5",
+        "preview-surface rounded-2xl p-6 sm:px-8 sm:pt-8 sm:pb-9 space-y-8",
         mode === "dark" ? "dark" : "",
       ].join(" ")}
       style={previewVars}
     >
-      <header className="flex items-baseline justify-between gap-4 pb-4.5 border-b border-border">
+      <header className="flex items-baseline justify-between gap-4 pb-5 border-b border-border">
         <div className="flex items-baseline gap-3">
           <h2
             className="text-[clamp(24px,2.4vw,31px)] font-medium tracking-tight m-0"
@@ -147,10 +147,9 @@ export function PreviewPanel({ name, mode, values, headerNote }: Props) {
           </span>
         </div>
         {headerNote ?? (
-          <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+          <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
             <span
-              className="w-1.5 h-1.5 rounded-full bg-primary"
-              style={{ animation: "ts-livepulse 2s ease-in-out infinite" }}
+              className="w-2 h-2 rounded-full bg-primary"
             />
             live preview
           </span>
@@ -248,7 +247,7 @@ export function PreviewPanel({ name, mode, values, headerNote }: Props) {
       </Section>
 
       <Section label="controls">
-        <div className="flex items-center gap-2.5 min-w-45">
+        <div className="flex items-center gap-3 min-w-45">
           <Switch id="preview-switch" defaultChecked />
           <Label htmlFor="preview-switch" className="text-sm cursor-pointer">
             Notifications
@@ -354,7 +353,7 @@ export function PreviewPanel({ name, mode, values, headerNote }: Props) {
             <span className="font-mono text-[10px] text-muted-foreground">
               4 of 24 deploys
             </span>
-            <div className="flex gap-1.5">
+            <div className="flex gap-2">
               <Button size="xs" variant="outline">
                 Prev
               </Button>
@@ -386,11 +385,11 @@ export function PreviewPanel({ name, mode, values, headerNote }: Props) {
           ).map((key) => (
             <div
               key={key}
-              className="flex items-center gap-2 rounded-lg ring-1 ring-border bg-card px-2.5 py-2"
+              className="flex items-center gap-2 rounded-lg ring-1 ring-border bg-card px-3 py-2"
             >
               <div
                 className="h-4 w-4 rounded-[5px] ring-1 ring-foreground/15 shrink-0"
-                style={{ background: `hsl(${values[key]})` }}
+                style={{ background: values[key] }}
               />
               <span className="font-mono text-[10px] text-muted-foreground truncate">
                 {key}

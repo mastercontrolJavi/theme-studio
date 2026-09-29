@@ -1,4 +1,5 @@
 import { normalizeHex } from "./colorUtils";
+import { canonicalColor } from "./colorValue";
 import { DEFAULT_PRESET, genFromSeed, getPreset } from "./themes";
 import { CSS_VARS, type CSSVar, type Mode, type ThemeConfig } from "./types";
 
@@ -58,9 +59,15 @@ export function parseUrlState(search: string): UrlState {
   const overrides: UrlOverrides = { light: {}, dark: {} };
   for (const v of CSS_VARS) {
     const lv = sp.get(`l.${v}`);
-    if (lv) overrides.light[v] = lv;
+    if (lv) {
+      const parsed = canonicalColor(lv);
+      if (parsed) overrides.light[v] = parsed;
+    }
     const dv = sp.get(`d.${v}`);
-    if (dv) overrides.dark[v] = dv;
+    if (dv) {
+      const parsed = canonicalColor(dv);
+      if (parsed) overrides.dark[v] = parsed;
+    }
   }
 
   return { base, seedHex, mode, overrides };

@@ -1,8 +1,8 @@
-import { formatHsl, hslToRgb, parseHsl } from "./colorUtils";
+import { canonicalColor, colorAlpha, colorToRgb, formatOklch, parseOklch } from "./colorValue";
 import type { CSSVar, ThemeValues } from "./types";
 
 /**
- * Real WCAG 2.1 contrast math for the pairings shadcn/ui actually paints.
+ * WCAG 2.2 contrast math for the pairings shadcn/ui actually paints.
  *
  * Two rules apply here:
  *   1.4.3 / 1.4.6 Contrast (text)      AA 4.5:1, AAA 7:1
@@ -171,18 +171,30 @@ export function pairingsForVar(v: CSSVar): Pairing[] {
 export function relativeLuminance([r, g, b]: [number, number, number]): number {
   const channel = (v: number) => {
     const c = v / 255;
-    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
   };
   return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
 }
 
-/** WCAG contrast ratio between two HSL strings. Returns 1 if either fails to parse. */
-export function contrastRatio(hslA: string, hslB: string): number {
-  const a = hslToRgb(hslA);
-  const b = hslToRgb(hslB);
-  if (!a || !b) return 1;
-  const la = relativeLuminance(a);
-  const lb = relativeLuminance(b);
+function composite(
+  top: [number, number, number],
+  alpha: number,
+  bottom: [number, number, number]
+): [number, number, number] {
+  return [0, 1, 2].map((channel) =>
+    top[channel] * alpha + bottom[channel] * (1 - alpha)
+  ) as [number, number, number];
+}
+
+/** WCAG contrast of painted colors, including alpha over the app's ivory canvas. */
+export function contrastRatio(foreground: string, background: string): number {
+  const fg = colorToRgb(foreground);
+  const bg = colorToRgb(background);
+  if (!fg || !bg) return 1;
+  const paintedBg = composite(bg, colorAlpha(background), [250, 246, 240]);
+  const paintedFg = composite(fg, colorAlpha(foreground), paintedBg);
+  const la = relativeLuminance(paintedFg);
+  const lb = relativeLuminance(paintedBg);
   const hi = Math.max(la, lb);
   const lo = Math.min(la, lb);
   return (hi + 0.05) / (lo + 0.05);
@@ -254,8 +266,8 @@ export function auditTheme(values: ThemeValues): ContrastReport {
 
 export interface ContrastFix {
   token: CSSVar;
-  /** The nudged HSL string to write back. */
-  hsl: string;
+  /** The nudged canonical OKLCH string to write back. */
+  value: string;
   /** Signed lightness delta applied, for the "L 32% -> 26%" readout. */
   fromL: number;
   toL: number;
@@ -269,11 +281,11 @@ export interface ContrastFix {
   breaks: Pairing[];
 }
 
-const SEARCH_STEP = 0.5;
+const SEARCH_STEP = 0.005;
 
 /**
  * Find the smallest lightness nudge to `pairing.fg` that brings the pairing to
- * AA, holding hue and saturation fixed.
+ * AA, holding hue and chroma fixed.
  *
  * Most tokens appear in more than one pairing (--muted-foreground sits on three
  * different grounds; --primary is both a fill and the ground under its own
@@ -282,14 +294,14 @@ const SEARCH_STEP = 0.5;
  * value exists does it fall back to fixing the target alone, flagging that in
  * the result so the UI can be honest about the tradeoff.
  *
- * Returns null when no lightness reaches AA at this hue and saturation.
+ * Returns null when no lightness reaches AA at this hue and chroma.
  */
 export function findContrastFix(
   values: ThemeValues,
   pairing: Pairing
 ): ContrastFix | null {
   if (pairing.informational) return null;
-  const fg = parseHsl(values[pairing.fg]);
+  const fg = parseOklch(canonicalColor(values[pairing.fg]) ?? "");
   if (!fg) return null;
 
   const bg = values[pairing.bg];
@@ -309,17 +321,17 @@ export function findContrastFix(
   // Walk outward from the current lightness so the nudge stays as small as
   // possible. At equal distance, try the direction away from the background
   // first, since that is the side that gains contrast.
-  const bgRgb = hslToRgb(bg);
+  const bgRgb = colorToRgb(bg);
   const bgIsLight = bgRgb ? relativeLuminance(bgRgb) > 0.18 : true;
 
   const candidates: number[] = [];
-  for (let d = SEARCH_STEP; d <= 100; d += SEARCH_STEP) {
+  for (let d = SEARCH_STEP; d <= 1.001; d += SEARCH_STEP) {
     const darker = fg.l - d;
     const lighter = fg.l + d;
     const first = bgIsLight ? darker : lighter;
     const second = bgIsLight ? lighter : darker;
-    if (first >= 0 && first <= 100) candidates.push(first);
-    if (second >= 0 && second <= 100) candidates.push(second);
+    if (first >= 0 && first <= 1) candidates.push(first);
+    if (second >= 0 && second <= 1) candidates.push(second);
   }
 
   /** Which currently-passing related pairings this candidate would drop. */
@@ -332,20 +344,39 @@ export function findContrastFix(
         ) < requiredRatio(p)
     );
 
+  // The outward scan finds the correct direction quickly. Refine the final
+  // interval so the change is the smallest lightness shift that passes.
+  const refine = (passing: number, keepRelated: boolean): number => {
+    let pass = passing;
+    let fail = fg.l;
+    for (let iteration = 0; iteration < 14; iteration++) {
+      const middle = (pass + fail) / 2;
+      const candidate = formatOklch({ ...fg, l: middle });
+      const clearsTarget = contrastRatio(candidate, bg) >= target;
+      if (clearsTarget && (!keepRelated || regressions(candidate).length === 0)) {
+        pass = middle;
+      } else {
+        fail = middle;
+      }
+    }
+    return pass;
+  };
+
   let fallback: number | null = null;
 
   for (const l of candidates) {
-    const candidate = formatHsl(fg.h, fg.s, l);
+    const candidate = formatOklch({ ...fg, l });
     if (contrastRatio(candidate, bg) < target) continue;
 
     if (fallback === null) fallback = l;
 
     if (regressions(candidate).length === 0) {
+      const preciseL = refine(l, true);
       return {
         token: pairing.fg,
-        hsl: candidate,
-        fromL: fg.l,
-        toL: l,
+        value: formatOklch({ ...fg, l: preciseL }),
+        fromL: fg.l * 100,
+        toL: preciseL * 100,
         keepsOthersPassing: true,
         breaks: [],
       };
@@ -353,13 +384,14 @@ export function findContrastFix(
   }
 
   if (fallback === null) return null;
-  const hsl = formatHsl(fg.h, fg.s, fallback);
-  const breaks = regressions(hsl);
+  const preciseL = refine(fallback, false);
+  const value = formatOklch({ ...fg, l: preciseL });
+  const breaks = regressions(value);
   return {
     token: pairing.fg,
-    hsl,
-    fromL: fg.l,
-    toL: fallback,
+    value,
+    fromL: fg.l * 100,
+    toL: preciseL * 100,
     keepsOthersPassing: breaks.length === 0,
     breaks,
   };
@@ -373,7 +405,7 @@ export function formatRatio(ratio: number): string {
 
 /**
  * Pick the foreground lightness that reads on `ground`, keeping the current
- * hue and saturation so a tinted label stays tinted.
+ * hue and chroma so a tinted label stays tinted.
  *
  * Aims for AAA (7:1) with the smallest move from where the token already is,
  * which keeps a near-white label near-white instead of snapping it to pure
@@ -386,26 +418,26 @@ export function deriveForeground(
   currentFg: string,
   target = 7
 ): string {
-  const fg = parseHsl(currentFg);
+  const fg = parseOklch(canonicalColor(currentFg) ?? "");
   if (!fg) return currentFg;
 
-  const groundRgb = hslToRgb(ground);
+  const groundRgb = colorToRgb(ground);
   const groundIsLight = groundRgb ? relativeLuminance(groundRgb) > 0.18 : true;
 
-  for (let d = 0; d <= 100; d += SEARCH_STEP) {
+  for (let d = 0; d <= 1.001; d += SEARCH_STEP) {
     const first = groundIsLight ? fg.l - d : fg.l + d;
     const second = groundIsLight ? fg.l + d : fg.l - d;
     for (const l of d === 0 ? [fg.l] : [first, second]) {
-      if (l < 0 || l > 100) continue;
-      const candidate = formatHsl(fg.h, fg.s, l);
+      if (l < 0 || l > 1) continue;
+      const candidate = formatOklch({ ...fg, l, a: 1 });
       if (contrastRatio(candidate, ground) >= target) return candidate;
     }
   }
 
   // Nothing reaches the target at this hue and saturation: take the extreme
   // that contrasts most.
-  const darkest = formatHsl(fg.h, fg.s, 0);
-  const lightest = formatHsl(fg.h, fg.s, 100);
+  const darkest = formatOklch({ ...fg, l: 0, a: 1 });
+  const lightest = formatOklch({ ...fg, l: 1, a: 1 });
   return contrastRatio(darkest, ground) >= contrastRatio(lightest, ground)
     ? darkest
     : lightest;

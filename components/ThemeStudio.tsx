@@ -101,7 +101,7 @@ export function ThemeStudio() {
     setDisplay(next);
   }, []);
 
-  /** Tween display values to the target palette in HSL space. */
+  /** Tween display values to the target palette in OKLCH space. */
   const morphTo = useCallback((target: ThemeValues) => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     if (finishRef.current !== null) clearTimeout(finishRef.current);
@@ -260,25 +260,25 @@ export function ThemeStudio() {
   );
 
   const handleVarChange = useCallback(
-    (key: CSSVar, hsl: string) => {
+    (key: CSSVar, color: string) => {
       // In Simple mode the label that sits on a colour is derived rather than
       // asked for, so a ground edit writes both variables at once.
       const pairedKey = detail === "simple" ? SIMPLE_AUTO_PAIRS[key] : undefined;
-      const pairedHsl = pairedKey
-        ? deriveForeground(hsl, theme[mode][pairedKey])
+      const pairedColor = pairedKey
+        ? deriveForeground(color, theme[mode][pairedKey])
         : undefined;
 
       setTheme((prev) => {
         const next = cloneTheme(prev);
-        next[mode][key] = hsl;
-        if (pairedKey && pairedHsl) next[mode][pairedKey] = pairedHsl;
+        next[mode][key] = color;
+        if (pairedKey && pairedColor) next[mode][pairedKey] = pairedColor;
         return next;
       });
       cancelMorph();
       updateDisplay({
         ...displayRef.current,
-        [key]: hsl,
-        ...(pairedKey && pairedHsl ? { [pairedKey]: pairedHsl } : {}),
+        [key]: color,
+        ...(pairedKey && pairedColor ? { [pairedKey]: pairedColor } : {}),
       });
     },
     [mode, detail, theme, cancelMorph, updateDisplay]
@@ -327,18 +327,19 @@ export function ThemeStudio() {
         setMobileSheetOpen(false);
       }}
       onCopyLink={handleCopyLink}
+      isMobile={isMobile}
     />
   );
 
   return (
-    <div className="flex flex-col h-screen bg-ivory-base">
+    <div className="relative flex h-dvh flex-col overflow-hidden bg-ivory-base">
       {/* Burgundy accent rail */}
-      <div className="h-[3px] shrink-0 bg-[linear-gradient(90deg,#8b1a4a,#b54373_70%,#c97a98)]" />
+      <div className="h-1 shrink-0 bg-[linear-gradient(90deg,#8b1a4a,#b54373_70%,#c97a98)]" />
 
       {/* Header */}
-      <header className="h-[58px] shrink-0 border-b border-ivory-border bg-ivory-surface flex items-center justify-between px-5 sm:px-5.5">
-        <div className="flex items-center gap-[11px]">
-          <Logo size={26} />
+      <header className="h-15 shrink-0 border-b border-ivory-border bg-ivory-surface flex items-center justify-between px-5 sm:px-6">
+        <div className="flex items-center gap-3">
+          <Logo size={28} />
           <div className="flex flex-col">
             <span
               className="text-[22px] leading-none text-ivory-ink whitespace-nowrap"
@@ -346,43 +347,43 @@ export function ThemeStudio() {
             >
               Theme Studio
             </span>
-            <span className="font-mono text-[8px] tracking-[0.22em] uppercase text-ivory-muted mt-[3px] whitespace-nowrap">
+            <span className="mt-1 font-mono text-[8px] tracking-[0.22em] uppercase text-ivory-muted whitespace-nowrap">
               shadcn · theme editor
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-3.5">
+        <div className="flex items-center gap-1 sm:gap-4">
           <button
             type="button"
             onClick={startTour}
             aria-label="Take the tour"
-            className="flex items-center gap-1.5 font-mono text-[10.5px] text-ivory-muted hover:text-ivory-accent transition-colors cursor-pointer rounded-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2"
+            className="flex h-10 w-10 items-center justify-center gap-2 font-mono text-[10.5px] text-ivory-muted hover:text-ivory-accent transition-colors cursor-pointer rounded-md sm:h-auto sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2"
           >
             <Compass size={13} />
             {/* Narrow screens keep the icon only: the header runs out of room
                 once the byline and Guide are in it. */}
             <span className="hidden sm:inline">Take the tour</span>
           </button>
-          <span className="hidden sm:block w-px h-3.5 bg-ivory-border" />
+          <span className="hidden sm:block w-px h-4 bg-ivory-border" />
           <button
             type="button"
             onClick={() => setHelpOpen(true)}
-            className="flex items-center gap-1.5 font-mono text-[10.5px] text-ivory-muted hover:text-ivory-accent transition-colors cursor-pointer rounded-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2"
+            className="flex h-10 w-10 items-center justify-center gap-2 font-mono text-[10.5px] text-ivory-muted hover:text-ivory-accent transition-colors cursor-pointer rounded-md sm:h-auto sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent focus-visible:ring-offset-2"
             aria-label="Open guide"
           >
             <HelpCircle size={13} />
             <span className="hidden sm:inline">Guide</span>
           </button>
-          <span className="hidden sm:block w-px h-3.5 bg-ivory-border" />
+          <span className="hidden sm:block w-px h-4 bg-ivory-border" />
           <span className="hidden sm:block font-mono text-[10px] text-ivory-faint tracking-[0.04em]">
             v1.0 · {CSS_VARS.length} vars
           </span>
-          <span className="hidden sm:block w-px h-3.5 bg-ivory-border" />
+          <span className="hidden sm:block w-px h-4 bg-ivory-border" />
           <a
             href="https://javiertpadilla.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-[10.5px] text-ivory-accent hover:text-ivory-accent-hover transition-colors text-right leading-tight"
+            className="hidden font-mono text-[10.5px] text-ivory-accent hover:text-ivory-accent-hover transition-colors text-right leading-tight sm:inline"
           >
             by Javier Padilla
           </a>
@@ -393,16 +394,16 @@ export function ThemeStudio() {
       <div className="flex-1 flex min-h-0">
         {/* Left control panel - desktop only */}
         {!isMobile && (
-          <aside className="w-[322px] shrink-0 border-r border-ivory-border bg-ivory-surface flex flex-col min-h-0">
+          <aside className="w-[376px] shrink-0 border-r border-ivory-border bg-ivory-surface flex flex-col min-h-0">
             {controlPanelEl}
           </aside>
         )}
 
         {/* Right preview */}
-        <main className="flex-1 overflow-y-auto overscroll-y-contain thin-scroll">
+        <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain thin-scroll">
           <div
             className={[
-              "px-6 pt-6 sm:px-8.5 sm:pt-7.5 pb-24 md:pb-15 mx-auto",
+              "px-6 pt-6 sm:px-9 sm:pt-8 pb-24 md:pb-15 mx-auto",
               compare ? "max-w-[1480px]" : "max-w-[1040px]",
             ].join(" ")}
           >
@@ -425,7 +426,7 @@ export function ThemeStudio() {
                       aria-pressed={active}
                       onClick={() => setCompare(id === "compare")}
                       className={[
-                        "cursor-pointer rounded-[7px] px-3 py-1.5 font-mono text-[10.5px] transition-all duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent",
+                        "min-h-10 cursor-pointer rounded-[7px] px-3 py-2 font-mono text-[10.5px] transition-all duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent",
                         active
                           ? "bg-ivory-base text-ivory-ink shadow-[0_1px_3px_rgba(26,10,20,0.16)]"
                           : "bg-transparent text-ivory-faint hover:text-ivory-muted",
