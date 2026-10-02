@@ -35,7 +35,7 @@ function LevelChip({
   return (
     <span
       className={[
-        "inline-flex items-center gap-1 rounded-[4px] px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em] border",
+        "inline-flex items-center gap-1 rounded-[4px] px-2 py-1 font-mono text-[9px] uppercase tracking-[0.08em] border",
         passed
           ? "bg-ivory-pass-tint border-ivory-pass/30 text-ivory-pass"
           : "bg-ivory-fail-tint border-ivory-fail/30 text-ivory-fail",
@@ -80,7 +80,7 @@ function PairingRow({
   return (
     <div
       className={[
-        "rounded-[7px] border px-2.5 py-2 transition-colors duration-200 motion-reduce:transition-none",
+        "rounded-[7px] border px-3 py-2 transition-colors duration-200 motion-reduce:transition-none",
         flash
           ? "border-ivory-pass/45 bg-ivory-pass-tint"
           : "border-ivory-border bg-ivory-base",
@@ -108,16 +108,16 @@ function PairingRow({
       </div>
 
       {showRaw ? (
-        <div className="mt-0.5 ml-[13px] truncate font-mono text-[9px] text-ivory-faint">
+        <div className="mt-1 ml-[13px] truncate font-mono text-[9px] text-ivory-faint">
           --{pairing.fg} on --{pairing.bg}
         </div>
       ) : (
-        <div className="mt-0.5 ml-[13px] truncate text-[9.5px] text-ivory-faint">
+        <div className="mt-1 ml-[13px] truncate text-[9.5px] text-ivory-faint">
           {pairing.example}
         </div>
       )}
 
-      <div className="mt-1.5 ml-[13px] flex flex-wrap items-center gap-1.5">
+      <div className="mt-2 ml-[13px] flex flex-wrap items-center gap-2">
         {informational ? (
           <span className="font-mono text-[9px] text-ivory-muted">
             not counted · decorative boundary
@@ -151,7 +151,7 @@ function PairingRow({
             fix={fix}
             required={required}
             onApply={(f) => {
-              onVarChange(f.token, f.hsl);
+              onVarChange(f.token, f.value);
               onFixed(pairing.id);
             }}
           />
@@ -192,7 +192,7 @@ export function ContrastPanel({
   const informational = report.results.filter((r) => !r.counted);
 
   return (
-    <section className="mb-5.5">
+    <section className="mb-6">
       <button
         type="button"
         onClick={() => onOpenChange(!open)}
@@ -202,10 +202,10 @@ export function ContrastPanel({
         <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ivory-muted transition-colors group-hover:text-ivory-ink">
           Accessibility
         </span>
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-center gap-2">
           <span
             className={[
-              "inline-flex items-center gap-1 rounded-[5px] border px-1.5 py-[3px] font-mono text-[9.5px] tabular-nums transition-colors duration-200 motion-reduce:transition-none",
+              "inline-flex items-center gap-1 rounded-[5px] border px-2 py-[3px] font-mono text-[9.5px] tabular-nums transition-colors duration-200 motion-reduce:transition-none",
               allPass
                 ? "border-ivory-pass/30 bg-ivory-pass-tint text-ivory-pass"
                 : "border-ivory-fail/30 bg-ivory-fail-tint text-ivory-fail",
@@ -230,13 +230,13 @@ export function ContrastPanel({
 
       <Collapse open={open}>
         <div className="pt-3">
-          <p className="mb-2.5 text-[10.5px] leading-relaxed text-ivory-muted">
+          <p className="mb-3 text-[10.5px] leading-relaxed text-ivory-muted">
             Measured with the WCAG relative luminance formula against the
             pairings shadcn/ui actually paints. Text needs 4.5:1 for AA and 7:1
             for AAA. Focus rings and solid fills need 3:1.
           </p>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             {counted.map((r) => (
               <PairingRow
                 key={r.pairing.id}
@@ -250,7 +250,7 @@ export function ContrastPanel({
             ))}
           </div>
 
-          <div className="mt-3 mb-1.5 flex items-center gap-2">
+          <div className="mt-3 mb-2 flex items-center gap-2">
             <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-ivory-faint">
               measured, not scored
             </span>
@@ -261,7 +261,7 @@ export function ContrastPanel({
             not decorative rules. These are shown so you can judge them, and
             left out of the score.
           </p>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             {informational.map((r) => (
               <PairingRow
                 key={r.pairing.id}
@@ -275,7 +275,7 @@ export function ContrastPanel({
             ))}
           </div>
 
-          <div className="mt-3 flex items-center justify-between gap-2 rounded-[6px] border border-ivory-border bg-ivory-elevated px-2.5 py-2">
+          <div className="mt-3 flex items-center justify-between gap-2 rounded-[6px] border border-ivory-border bg-ivory-elevated px-3 py-2">
             <span className="font-mono text-[9.5px] uppercase tracking-[0.1em] text-ivory-muted">
               {otherMode.label} mode
             </span>

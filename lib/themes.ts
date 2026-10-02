@@ -1,34 +1,35 @@
-import { formatHsl, hexToHsl, hslToHex, parseHsl } from "./colorUtils";
+import { formatHsl, hexToHsl, parseHsl } from "./colorUtils";
+import { canonicalColor, colorToHex } from "./colorValue";
 import type { Mode, ThemeConfig, ThemeValues } from "./types";
 
 /**
  * Five preset themes. Each defines a complete light + dark palette.
- * Values are HSL strings ("h s% l%") matching shadcn/ui's CSS variable format.
+ * Raw preset values are converted once to canonical OKLCH for editing and export.
  */
 
-export const PRESETS: ThemeConfig[] = [
+const RAW_PRESETS: ThemeConfig[] = [
   {
     name: "Ivory",
     light: {
-      background: "36 33% 96%",
-      foreground: "330 45% 8%",
-      card: "34 27% 93%",
-      "card-foreground": "330 45% 8%",
-      popover: "36 33% 96%",
-      "popover-foreground": "330 45% 8%",
-      primary: "336 68% 32%",
-      "primary-foreground": "36 33% 96%",
+      background: "#FAF6F0",
+      foreground: "#1A0A14",
+      card: "#EDE7DE",
+      "card-foreground": "#1A0A14",
+      popover: "#FAF6F0",
+      "popover-foreground": "#1A0A14",
+      primary: "#8B1A4A",
+      "primary-foreground": "#FAF6F0",
       secondary: "30 22% 89%",
       "secondary-foreground": "330 45% 8%",
       muted: "30 22% 89%",
       "muted-foreground": "21 14% 50%",
       accent: "336 20% 94%",
-      "accent-foreground": "336 68% 32%",
+      "accent-foreground": "#8B1A4A",
       destructive: "0 60% 42%",
       "destructive-foreground": "36 33% 96%",
       border: "27 21% 80%",
       input: "27 21% 80%",
-      ring: "336 68% 32%",
+      ring: "#8B1A4A",
     },
     dark: {
       background: "330 18% 9%",
@@ -234,6 +235,15 @@ export const PRESETS: ThemeConfig[] = [
   },
 ];
 
+function normalizeTheme(theme: ThemeConfig): ThemeConfig {
+  const normalize = (values: ThemeValues): ThemeValues =>
+    Object.fromEntries(
+      Object.entries(values).map(([key, value]) => [key, canonicalColor(value) ?? value])
+    ) as ThemeValues;
+  return { name: theme.name, light: normalize(theme.light), dark: normalize(theme.dark) };
+}
+
+export const PRESETS: ThemeConfig[] = RAW_PRESETS.map(normalizeTheme);
 export const DEFAULT_PRESET = PRESETS[0];
 
 export function getPreset(name: string): ThemeConfig | undefined {
@@ -248,7 +258,7 @@ export function chipBands(theme: ThemeConfig, mode: Mode): string[] {
   const v = theme[mode];
   return (
     ["background", "primary", "accent", "secondary", "foreground"] as const
-  ).map((k) => hslToHex(v[k]));
+  ).map((k) => colorToHex(v[k]));
 }
 
 const clamp = (n: number, a: number, b: number) => Math.min(b, Math.max(a, n));
@@ -306,5 +316,5 @@ export function genFromSeed(hex: string): ThemeConfig {
     input: tint(Math.min(chroma, 16), 22),
     ring: formatHsl(h, clamp(chroma + 4, 30, 78), clamp(seedHsl.l + 14, 52, 64)),
   };
-  return { name: "Custom", light, dark };
+  return normalizeTheme({ name: "Custom", light, dark });
 }

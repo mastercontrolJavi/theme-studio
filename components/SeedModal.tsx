@@ -19,22 +19,18 @@ interface Props {
 
 const CURATED_SEEDS = [
   "#8b1a4a",
-  "#2563eb",
-  "#0ea5e9",
-  "#16a34a",
-  "#d97706",
-  "#6d28d9",
-  "#db2777",
-  "#0d9488",
+  "#6f2445",
+  "#a63c68",
+  "#1a0a14",
 ];
 
 function BandPreview({ label, bands }: { label: string; bands: string[] }) {
   return (
     <div>
-      <span className="block mb-1.5 font-mono text-[9.5px] uppercase tracking-widest text-ivory-muted">
+      <span className="block mb-2 font-mono text-[9.5px] uppercase tracking-widest text-ivory-muted">
         {label}
       </span>
-      <div className="flex h-[46px] rounded-[9px] overflow-hidden border border-ivory-border">
+      <div className="flex h-12 rounded-[9px] overflow-hidden border border-ivory-border">
         {bands.map((c, i) => (
           <span
             key={i}
@@ -52,12 +48,12 @@ function BandPreview({ label, bands }: { label: string; bands: string[] }) {
  * palettes live, then apply it as the "Custom" preset.
  */
 export function SeedModal({ open, onClose, onApply }: Props) {
-  const [hex, setHex] = useState("#6d28d9");
+  const [hex, setHex] = useState("#8b1a4a");
 
   if (!open) return null;
 
   const valid = normalizeHex(hex);
-  const theme = genFromSeed(valid ?? "#6d28d9");
+  const theme = genFromSeed(valid ?? "#8b1a4a");
 
   return (
     <div
@@ -71,7 +67,7 @@ export function SeedModal({ open, onClose, onApply }: Props) {
         className="w-[580px] max-w-full bg-ivory-base border border-ivory-border rounded-[14px] overflow-hidden shadow-[0_30px_70px_-20px_rgba(26,10,20,0.5)] animate-[ts-pop_0.2s_cubic-bezier(0.2,0.8,0.3,1)]"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between px-5.5 py-5 border-b border-ivory-border">
+        <div className="flex items-start justify-between px-6 py-5 border-b border-ivory-border">
           <div>
             <div
               className="text-[23px] text-ivory-ink"
@@ -79,7 +75,7 @@ export function SeedModal({ open, onClose, onApply }: Props) {
             >
               Generate from a seed
             </div>
-            <div className="text-[12.5px] text-ivory-muted mt-0.5">
+            <div className="text-[12.5px] text-ivory-muted mt-1">
               One colour in. A balanced light + dark palette out.
             </div>
           </div>
@@ -87,19 +83,19 @@ export function SeedModal({ open, onClose, onApply }: Props) {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="text-[16px] text-ivory-muted hover:text-ivory-ink transition-colors cursor-pointer"
+            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-md text-[16px] text-ivory-muted transition-colors hover:text-ivory-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent"
           >
             ✕
           </button>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-6 p-5.5">
+        <div className="flex flex-col sm:flex-row gap-6 p-6">
           {/* Picker + curated swatches */}
           <div className="w-[200px] shrink-0">
             <div className="seed-picker-wrapper">
-              <HexColorPicker color={valid ?? "#6d28d9"} onChange={setHex} />
+              <HexColorPicker color={valid ?? "#8b1a4a"} onChange={setHex} />
             </div>
-            <div className="flex items-center gap-2 mt-2.5">
+            <div className="flex items-center gap-2 mt-3">
               <span className="font-mono text-[9.5px] uppercase tracking-widest text-ivory-muted">
                 seed
               </span>
@@ -108,10 +104,10 @@ export function SeedModal({ open, onClose, onApply }: Props) {
                 value={hex}
                 spellCheck={false}
                 onChange={(e) => setHex(e.target.value)}
-                className="flex-1 h-6.5 rounded-[5px] border border-ivory-border bg-ivory-base px-2 font-mono text-[10.5px] text-ivory-muted focus:text-ivory-ink focus:outline-none focus:border-ivory-accent focus:bg-white transition-colors"
+                className="h-10 min-w-0 flex-1 rounded-md border border-ivory-border bg-ivory-base px-2 font-mono text-[10.5px] text-ivory-muted transition-colors focus:border-ivory-accent focus:bg-ivory-base focus:text-ivory-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent"
               />
             </div>
-            <div className="flex flex-wrap gap-[7px] mt-3">
+            <div className="mt-3 flex flex-wrap gap-2">
               {CURATED_SEEDS.map((s) => (
                 <button
                   key={s}
@@ -119,7 +115,7 @@ export function SeedModal({ open, onClose, onApply }: Props) {
                   aria-label={`Use seed ${s}`}
                   onClick={() => setHex(s)}
                   className={[
-                    "w-5.5 h-5.5 rounded-md border border-ivory-border cursor-pointer transition-transform hover:scale-110",
+                    "h-10 w-10 cursor-pointer rounded-md border border-ivory-border transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ivory-accent",
                     s === valid
                       ? "shadow-[0_0_0_2px_var(--color-ivory-base),0_0_0_3.5px_var(--color-ivory-accent)]"
                       : "",
@@ -131,17 +127,17 @@ export function SeedModal({ open, onClose, onApply }: Props) {
           </div>
 
           {/* Live light/dark palette preview */}
-          <div className="flex-1 flex flex-col gap-3.5 justify-center">
+          <div className="flex-1 flex flex-col gap-4 justify-center">
             <BandPreview label="Light" bands={chipBands(theme, "light")} />
             <BandPreview label="Dark" bands={chipBands(theme, "dark")} />
           </div>
         </div>
 
-        <div className="flex justify-end gap-2.5 px-5.5 py-[15px] border-t border-ivory-border bg-ivory-surface">
+        <div className="flex justify-end gap-3 border-t border-ivory-border bg-ivory-surface px-6 py-4">
           <button
             type="button"
             onClick={onClose}
-            className="h-9.5 px-4 rounded-lg bg-ivory-elevated border border-ivory-border text-ivory-ink text-[13px] font-medium hover:bg-ivory-border transition-colors cursor-pointer"
+            className="h-10 px-4 rounded-lg bg-ivory-elevated border border-ivory-border text-ivory-ink text-[13px] font-medium hover:bg-ivory-border transition-colors cursor-pointer"
           >
             Cancel
           </button>
@@ -152,7 +148,7 @@ export function SeedModal({ open, onClose, onApply }: Props) {
               onApply(genFromSeed(valid), valid);
               onClose();
             }}
-            className="h-9.5 px-4.5 rounded-lg bg-ivory-accent text-ivory-accent-text text-[13px] font-medium hover:bg-ivory-accent-hover transition-colors cursor-pointer"
+            className="h-10 px-5 rounded-lg bg-ivory-accent text-ivory-accent-text text-[13px] font-medium hover:bg-ivory-accent-hover transition-colors cursor-pointer"
           >
             Use this theme
           </button>

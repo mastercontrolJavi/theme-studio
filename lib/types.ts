@@ -27,8 +27,8 @@ export type Mode = "light" | "dark";
 /** How much of the editor is on screen. Persisted to localStorage. */
 export type DetailLevel = "simple" | "advanced";
 
-/** Which notation the value inputs speak. Simple mode is always hex. */
-export type ColorFormat = "hex" | "hsl" | "oklch";
+/** Picker display notation. Stored theme values are always OKLCH. */
+export type ColorFormat = "hex" | "rgb" | "hsl" | "oklch";
 
 export type ThemeValues = Record<CSSVar, string>;
 
